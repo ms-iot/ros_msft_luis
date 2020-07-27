@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(azure_cs_luis)
+project(ros_msft_luis)
 
 if(MSVC)
   ## Compile as at least C++17 for cppwinrt
@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   roslib
   std_msgs
+  ros_msft_luis_msgs
 )
 
 
@@ -33,8 +34,13 @@ add_library(parson STATIC
 
 catkin_package(
 #  INCLUDE_DIRS include
-  LIBRARIES azure_cs_luis
-  CATKIN_DEPENDS roscpp roslib std_msgs
+  LIBRARIES 
+    ros_msft_luis
+  CATKIN_DEPENDS 
+    roscpp 
+    roslib 
+    std_msgs 
+    ros_msft_luis_msgs
 )
 
 include_directories(
