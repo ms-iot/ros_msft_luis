@@ -2,70 +2,68 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS 1
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <ros/ros.h>
 #include <windows.h>
 
 #include <iostream>
 #include <speechapi_cxx.h>
+#include <parson.h>
+
+#include <ros_msft_luis_msgs/Entity.h>
+#include <ros_msft_luis_msgs/Intent.h>
+#include <ros_msft_luis_msgs/TopIntent.h>
 
 using namespace std;
 using namespace Microsoft::CognitiveServices::Speech;
+using namespace Microsoft::CognitiveServices::Speech::Audio;
+using namespace Microsoft::CognitiveServices::Speech::Intent;
 
 std::string g_luisKey;
 std::string g_luisRegion;
+std::string g_luisAppId;
+std::string g_luisIntent;
 
-void recognizeSpeech()
+
+ros::Publisher g_intent_pub;
+
+void parseAndPublishFromJson(std::string luisJson)
 {
-    // Creates an instance of a speech config with specified subscription key and service region.
-    // Replace with your own subscription key and service region (e.g., "westus").
-    auto config = SpeechConfig::FromAuthorizationToken(g_luisKey.c_str(), g_luisRegion.c_str());
+    ros_msft_luis_msgs::TopIntent intent;
 
-    // Creates a speech recognizer.
-    auto recognizer = SpeechRecognizer::FromConfig(config);
-    ROS_INFO("Waiting for utterance\n");
-
-    // Performs recognition. RecognizeOnceAsync() returns when the first utterance has been recognized,
-    // so it is suitable only for single shot recognition like command or query. For long-running
-    // recognition, use StartContinuousRecognitionAsync() instead.
-    auto result = recognizer->RecognizeOnceAsync().get();
-
-    // Checks result.
-    if (result->Reason == ResultReason::RecognizedSpeech)
+    JSON_Value* root_value = json_parse_string(luisJson.c_str());
+    JSON_Object* root_object = json_value_get_object(root_value);
+    if (root_object)
     {
-        ROS_INFO("We recognized: %s", result->Text);
-    }
-    else if (result->Reason == ResultReason::NoMatch)
-    {
-        ROS_INFO("NOMATCH: Speech could not be recognized.");
-    }
-    else if (result->Reason == ResultReason::Canceled)
-    {
-        auto cancellation = CancellationDetails::FromResult(result);
-        ROS_INFO("CANCELED: Reason=%d", (int)cancellation->Reason);
-
-        if (cancellation->Reason == CancellationReason::Error) 
+        JSON_Object* topScoringIntent_object = json_object_dotget_object(root_object, "topScoringIntent");
+        if (topScoringIntent_object)
         {
-            ROS_INFO("CANCELED: ErrorCode= %d", (int)cancellation->ErrorCode);
-            ROS_INFO("CANCELED: ErrorDetails= %s", cancellation->ErrorDetails);
-            ROS_INFO("CANCELED: Did you update the subscription info?");
+            JSON_Value* intent_value = json_object_get_value(topScoringIntent_object, "intent");
+            if (intent_value != NULL)
+            {
+                auto value = json_value_get_string(intent_value);
+                intent.topIntent = value;
+            }
         }
     }
+
+    g_intent_pub.publish(intent);
 }
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "azure_cs_luis");
+    ros::init(argc, argv, "ros_msft_luis");
     ros::NodeHandle nh;
+    ros::NodeHandle nhPrivate("~");
+    std::promise<void> recognitionEnd;
 
     g_luisKey = std::getenv("azure_cs_luis_key");
-    g_luisRegion = std::getenv("azure_cs_luis_region");;
+    g_luisAppId = std::getenv("azure_cs_luis_appid");
+    g_luisRegion = std::getenv("azure_cs_luis_region");
+    g_luisIntent = std::getenv("azure_cs_luis_intent");
 
     // Parameters.
     if (g_luisKey.empty() ||
-        nh.getParam("azure_cs_luis_key", g_luisKey))
+        nhPrivate.getParam("key", g_luisKey))
     {
         ROS_ERROR("luis key has not been set");
         nh.shutdown();
@@ -73,19 +71,101 @@ int main(int argc, char **argv)
     }
     
     if (g_luisRegion.empty() ||
-        nh.getParam("azure_cs_luis_region", g_luisRegion))
+        nhPrivate.getParam("region", g_luisRegion))
     {
         ROS_ERROR("luis region has not been set");
         nh.shutdown();
         return 0;
     }
 
-    while (ros::ok())
+    if (g_luisIntent.empty() ||
+        nhPrivate.getParam("intent", g_luisIntent))
     {
-        recognizeSpeech();
-        ros::spinOnce();
+        ROS_ERROR("luis intent has not been set");
+        nh.shutdown();
+        return 0;
     }
 
+    if (g_luisAppId.empty() ||
+        nh.getParam("AppId", g_luisAppId))
+    {
+        ROS_ERROR("luis AppId has not been set");
+        nh.shutdown();
+        return 0;
+    }
+
+    g_intent_pub = nh.advertise<ros_msft_luis_msgs::TopIntent>("intent", 1);
+
+
+    // Creates an instance of a speech config with specified subscription key and service region.
+    // Replace with your own subscription key and service region (e.g., "westus").
+    auto config = SpeechConfig::FromSubscription(g_luisKey.c_str(), g_luisRegion.c_str());
+
+    // Creates an intent recognizer using microphone as audio input.
+    auto recognizer = IntentRecognizer::FromConfig(config);
+
+    // Creates a Language Understanding model using the app id, and adds specific intents from your model
+    auto model = LanguageUnderstandingModel::FromAppId(g_luisAppId);
+    recognizer->AddIntent(model, "Move Backward", "447f66a3-fa5a-4460-bd9d-6ddbc5f746dd");
+
+    while (ros::ok())
+    {
+        // Subscribes to events.
+        recognizer->Recognizing.Connect([] (const IntentRecognitionEventArgs& e)
+        {
+            ROS_DEBUG("Recognizing: %s", e.Result->Text);
+        });
+
+        recognizer->Recognized.Connect([] (const IntentRecognitionEventArgs& e)
+        {
+            if (e.Result->Reason == ResultReason::RecognizedIntent)
+            {
+                ROS_DEBUG("RECOGNIZED: Text = %s", e.Result->Text);
+                ROS_DEBUG("Intent Id: %s", e.Result->IntentId);
+
+                std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
+
+                ROS_INFO("JSON: %s", luisJson);
+                parseAndPublishFromJson(luisJson);
+            }
+            else if (e.Result->Reason == ResultReason::RecognizedSpeech)
+            {
+                ROS_DEBUG("RECOGNIZED: Text= ", e.Result->Text);
+            }
+            else if (e.Result->Reason == ResultReason::NoMatch)
+            {
+                ROS_DEBUG("NOMATCH: Speech could not be recognized.");
+            }
+        });
+
+        recognizer->Canceled.Connect([&recognitionEnd](const IntentRecognitionCanceledEventArgs& e)
+        {
+            ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
+
+            if (e.Reason == CancellationReason::Error)
+            {
+                ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
+                ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails);
+                ROS_DEBUG("CANCELED: Did you update the subscription info?");
+            }
+
+            recognitionEnd.set_value(); // Notify to stop recognition.
+        });
+
+        recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs& e)
+        {
+            ROS_DEBUG("Session stopped.");
+            recognitionEnd.set_value(); // Notify to stop recognition.
+        });    
+        
+        recognizer->StartContinuousRecognitionAsync();
+
+        recognitionEnd.get_future().get();
+
+        ros::spin();
+    }
+
+    recognizer->StopContinuousRecognitionAsync();
     nh.shutdown();
     return 0;
 }

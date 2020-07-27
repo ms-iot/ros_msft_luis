@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>azure_cs_luis</name>
+  <name>ros_msft_luis</name>
   <version>0.0.1</version>
   <description>The Azure Cognative Services LUIS package</description>
   <maintainer email="lamadio@microsoft.com">Lou Amadio</maintainer>
@@ -11,13 +11,16 @@
   <build_depend>roscpp</build_depend>
   <build_depend>roslib</build_depend>
   <build_depend>std_msgs</build_depend>
+  <build_depend>ros_msft_luis_msgs</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>roslib</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
+  <build_export_depend>ros_msft_luis_msgs</build_export_depend>
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>roslib</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <exec_depend>ros_msft_luis_msgs</exec_depend>
 
   <export>
   </export>
