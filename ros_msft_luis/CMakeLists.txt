@@ -38,11 +38,13 @@ install(DIRECTORY launch
 )
 
 if(MSVC)
-find_program(NUGET nuget)
-if(NOT NUGET)
-    message(FATAL "CMake could not find the nuget command line tool. Please install it from nuget.org")
-else()
-  execute_process(COMMAND ${NUGET} restore ${CMAKE_CURRENT_BINARY_DIR}/packages.config -PackagesDirectory ${CMAKE_CURRENT_BINARY_DIR})
+  message("Installing Microsoft Cognitive Services Nuget package")
+
+  find_program(NUGET nuget)
+  if(NOT NUGET)
+      message(FATAL "CMake could not find the nuget command line tool. Please install it from nuget.org")
+  else()
+    execute_process(COMMAND ${NUGET} restore ${CMAKE_CURRENT_BINARY_DIR}/packages.config -PackagesDirectory ${CMAKE_CURRENT_BINARY_DIR})
 
   include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/c_api
