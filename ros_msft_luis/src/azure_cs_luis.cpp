@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 
     // Creates a Language Understanding model using the app id, and adds specific intents from your model
     auto model = LanguageUnderstandingModel::FromAppId(g_luisAppId);
-    recognizer->AddIntent(model, "Move Backward", "447f66a3-fa5a-4460-bd9d-6ddbc5f746dd");
+    recognizer->AddAllIntents(model);
 
     while (ros::ok())
     {
