@@ -1,0 +1,3 @@
+[submodule "ros_msft_luis/parson"]
+	path = ros_msft_luis/parson
+	url = https://github.com/kgabis/parson

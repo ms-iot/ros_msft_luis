@@ -1,15 +1,34 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(azure_cs_luis)
 
-## Compile as at least C++17 for cppwinrt
-add_compile_options(/Od)
-add_compile_options(/std:c++latest)
-add_compile_options(/await)
+if(MSVC)
+  ## Compile as at least C++17 for cppwinrt
+  add_compile_options(/Od)
+  add_compile_options(/std:c++latest)
+  add_compile_options(/await)
+
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
+  
+  # WORKAROUND: ros_type_introspection/utils/variant.hpp(235): warning C4267: '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+  add_compile_options(/wd4267)
+  # WORKAROUND: ros/message_event.h(217): warning C4127: conditional expression is constant
+  add_compile_options(/wd4127)
+  # WORKAROUND: parson/parson.c(62): warning C4232: nonstandard extension used: 'parson_malloc'
+  add_compile_options(/wd4232)
+endif()
+
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   roslib
   std_msgs
+)
+
+
+add_library(parson STATIC
+  parson/parson.c
+  parson/parson.h
 )
 
 catkin_package(
@@ -20,12 +39,16 @@ catkin_package(
 
 include_directories(
   include
+  parson
   ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(${PROJECT_NAME}_node src/azure_cs_luis.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_node 
+  ${catkin_LIBRARIES}
+  parson
+  )
 
 install(TARGETS ${PROJECT_NAME}_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
