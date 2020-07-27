@@ -1,3 +1,4 @@
 <launch>
-  <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen"/>
+  <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
+  </node>
 </launch>
