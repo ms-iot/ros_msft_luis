@@ -3,7 +3,9 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include <ros/ros.h>
+#ifdef WIN32
 #include <windows.h>
+#endif
 
 #include <iostream>
 #include <speechapi_cxx.h>
@@ -113,24 +115,24 @@ int main(int argc, char **argv)
         // Subscribes to events.
         recognizer->Recognizing.Connect([] (const IntentRecognitionEventArgs& e)
         {
-            ROS_DEBUG("Recognizing: %s", e.Result->Text);
+            ROS_DEBUG("Recognizing: %s", e.Result->Text.c_str());
         });
 
         recognizer->Recognized.Connect([] (const IntentRecognitionEventArgs& e)
         {
             if (e.Result->Reason == ResultReason::RecognizedIntent)
             {
-                ROS_DEBUG("RECOGNIZED: Text = %s", e.Result->Text);
-                ROS_DEBUG("Intent Id: %s", e.Result->IntentId);
+                ROS_DEBUG("RECOGNIZED: Text = %s", e.Result->Text.c_str());
+                ROS_DEBUG("Intent Id: %s", e.Result->IntentId.c_str());
 
                 std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
 
-                ROS_INFO("JSON: %s", luisJson);
+                ROS_INFO("JSON: %s", luisJson.c_str());
                 parseAndPublishFromJson(luisJson);
             }
             else if (e.Result->Reason == ResultReason::RecognizedSpeech)
             {
-                ROS_DEBUG("RECOGNIZED: Text= ", e.Result->Text);
+                ROS_DEBUG("RECOGNIZED: Text= ", e.Result->Text.c_str());
             }
             else if (e.Result->Reason == ResultReason::NoMatch)
             {
@@ -145,7 +147,7 @@ int main(int argc, char **argv)
             if (e.Reason == CancellationReason::Error)
             {
                 ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
-                ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails);
+                ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
                 ROS_DEBUG("CANCELED: Did you update the subscription info?");
             }
 
