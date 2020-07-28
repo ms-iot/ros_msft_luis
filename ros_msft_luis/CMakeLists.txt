@@ -49,6 +49,12 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+add_executable(${PROJECT_NAME}_node src/azure_cs_luis.cpp)
+add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_node 
+  ${catkin_LIBRARIES}
+  parson
+  )
 
 if(MSVC)
   message("Installing Microsoft Cognitive Services Nuget package")
@@ -70,26 +76,34 @@ if(MSVC)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/packages.config ${CMAKE_CURRENT_BINARY_DIR}/packages.config COPYONLY)
     configure_file(${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/runtimes/win-x64/native/Microsoft.CognitiveServices.Speech.core.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.core.dll COPYONLY)
   endif()
-else
-if (DEFINED ENV{SPEECHSDK_ROOT})
-    include_directories(
-      ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/c_api
-      ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/cxx_api
-    )
-
-    target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib)
-
 else()
-      message(FATAL "Please install and define SPEECHSDK_ROOT per the instructions at https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/quickstart/cpp/linux/from-microphone")
-endif()
+  if(EXISTS "$ENV{SPEECHSDK_ROOT}/include/c_api/speechapi_c.h")
+ 
+      include_directories(
+        $ENV{SPEECHSDK_ROOT}/include/c_api
+        $ENV{SPEECHSDK_ROOT}/include/cxx_api
+      )
+
+      if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
+        set(COG_ARCH "arm64")
+      else()
+        set(COG_ARCH "x64")
+      endif()
+
+
+      message("Speech SDK Link - $ENV{SPEECHSDK_ROOT}/lib/${COG_ARCH}")
+
+      link_directories($ENV{SPEECHSDK_ROOT}/lib/${COG_ARCH})
+
+      target_link_libraries(${PROJECT_NAME}_node 
+        libMicrosoft.CognitiveServices.Speech.core.so
+        libasound.so.2)
+
+  else()
+        message(FATAL "Please install and define SPEECHSDK_ROOT per the instructions at https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/quickstart/cpp/linux/from-microphone")
+  endif()
 endif()
 
-add_executable(${PROJECT_NAME}_node src/azure_cs_luis.cpp)
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_node 
-  ${catkin_LIBRARIES}
-  parson
-  )
 
 install(TARGETS ${PROJECT_NAME}_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
