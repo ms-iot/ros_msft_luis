@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   roslib
   std_msgs
+  audio_common_msgs
   ros_msft_luis_msgs
 )
 
@@ -40,6 +41,7 @@ catkin_package(
     roscpp 
     roslib 
     std_msgs 
+    audio_common_msgs
     ros_msft_luis_msgs
 )
 

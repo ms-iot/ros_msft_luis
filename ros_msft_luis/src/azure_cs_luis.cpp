@@ -10,6 +10,8 @@
 #include <iostream>
 #include <speechapi_cxx.h>
 #include <parson.h>
+#include <audio_common_msgs/AudioData.h>
+
 
 #include <ros_msft_luis_msgs/Entity.h>
 #include <ros_msft_luis_msgs/Intent.h>
@@ -25,8 +27,12 @@ std::string g_luisRegion;
 std::string g_luisAppId;
 std::string g_luisIntent;
 
+std::string g_microphoneTopic;
 
 ros::Publisher g_intent_pub;
+ros::Subscriber g_microphone_audio_sub;
+
+std::shared_ptr<PushAudioInputStream> g_pushStream;
 
 void parseAndPublishFromJson(std::string luisJson)
 {
@@ -51,6 +57,12 @@ void parseAndPublishFromJson(std::string luisJson)
     g_intent_pub.publish(intent);
 }
 
+void onAudio(const audio_common_msgs::AudioDataConstPtr &msg)
+{
+    // push stream signature is not const correct, but does not modify the buffer.
+    g_pushStream->Write(const_cast<uint8_t*>(&msg->data[0]), msg->data.size());
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ros_msft_luis");
@@ -62,6 +74,7 @@ int main(int argc, char **argv)
     g_luisAppId = std::getenv("azure_cs_luis_appid");
     g_luisRegion = std::getenv("azure_cs_luis_region");
     g_luisIntent = std::getenv("azure_cs_luis_intent");
+    
 
     // Parameters.
     if (g_luisKey.empty() ||
@@ -103,8 +116,37 @@ int main(int argc, char **argv)
     // Replace with your own subscription key and service region (e.g., "westus").
     auto config = SpeechConfig::FromSubscription(g_luisKey.c_str(), g_luisRegion.c_str());
 
-    // Creates an intent recognizer using microphone as audio input.
-    auto recognizer = IntentRecognizer::FromConfig(config);
+    std::shared_ptr<IntentRecognizer> recognizer;
+
+    if (nh.getParam("mic_topic", g_microphoneTopic))
+    {
+        int sps;
+        int bps;
+        
+        if (!nhPrivate.getParam("bps", bps))
+        {
+            bps = 16;
+        }
+        
+        if (!nhPrivate.param("sps", sps))
+        {
+            sps = 44000;
+        }
+
+        // channels?
+        auto streamFormat = AudioStreamFormat::GetWaveFormatPCM(sps, bps, 1);
+        g_pushStream = PushAudioInputStream::Create(streamFormat);
+        auto audioConfig = AudioConfig::FromStreamInput(g_pushStream);
+
+        recognizer = IntentRecognizer::FromConfig(config, audioConfig);
+
+        g_microphone_audio_sub = nh.subscribe(g_microphoneTopic, 10, onAudio);
+    }
+    else
+    {
+        // Creates an intent recognizer using the default microphone as audio input.
+        recognizer = IntentRecognizer::FromConfig(config);
+    }
 
     // Creates a Language Understanding model using the app id, and adds specific intents from your model
     auto model = LanguageUnderstandingModel::FromAppId(g_luisAppId);
