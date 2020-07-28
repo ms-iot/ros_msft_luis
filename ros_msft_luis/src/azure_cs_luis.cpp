@@ -25,7 +25,6 @@ using namespace Microsoft::CognitiveServices::Speech::Intent;
 std::string g_luisKey;
 std::string g_luisRegion;
 std::string g_luisAppId;
-std::string g_luisIntent;
 
 std::string g_microphoneTopic;
 
@@ -70,12 +69,24 @@ int main(int argc, char **argv)
     ros::NodeHandle nhPrivate("~");
     std::promise<void> recognitionEnd;
 
-    g_luisKey = std::getenv("azure_cs_luis_key");
-    g_luisAppId = std::getenv("azure_cs_luis_appid");
-    g_luisRegion = std::getenv("azure_cs_luis_region");
-    g_luisIntent = std::getenv("azure_cs_luis_intent");
-    
+    const char* env = std::getenv("azure_cs_luis_key");
+    if (env != nullptr)
+    {
+        g_luisKey = env;
+    }
 
+    env = std::getenv("azure_cs_luis_appid");
+    if (env != nullptr)
+    {
+        g_luisAppId = env;
+    }
+
+    env = std::getenv("azure_cs_luis_region");
+    if (env != nullptr)
+    {
+        g_luisRegion = env;
+    }
+    
     // Parameters.
     if (g_luisKey.empty() ||
         nhPrivate.getParam("key", g_luisKey))
@@ -89,14 +100,6 @@ int main(int argc, char **argv)
         nhPrivate.getParam("region", g_luisRegion))
     {
         ROS_ERROR("luis region has not been set");
-        nh.shutdown();
-        return 0;
-    }
-
-    if (g_luisIntent.empty() ||
-        nhPrivate.getParam("intent", g_luisIntent))
-    {
-        ROS_ERROR("luis intent has not been set");
         nh.shutdown();
         return 0;
     }
