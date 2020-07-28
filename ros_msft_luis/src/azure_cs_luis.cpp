@@ -132,7 +132,7 @@ int main(int argc, char **argv)
             }
             else if (e.Result->Reason == ResultReason::RecognizedSpeech)
             {
-                ROS_DEBUG("RECOGNIZED: Text= ", e.Result->Text.c_str());
+                ROS_DEBUG("RECOGNIZED: Text= %s", e.Result->Text.c_str());
             }
             else if (e.Result->Reason == ResultReason::NoMatch)
             {
