@@ -10,6 +10,7 @@ add_message_files(
    TopIntent.msg
    Intent.msg
    Entity.msg
+   Dimension.msg
 )
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
