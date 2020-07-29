@@ -49,7 +49,10 @@ void parseAndPublishFromJson(std::string luisJson)
             {
                 auto value = json_value_get_string(intent_value);
                 intent.topIntent = value;
+
             }
+
+            intent.score = (float)json_object_get_number(topScoringIntent_object, "score"); 
         }
     }
 
@@ -133,7 +136,7 @@ int main(int argc, char **argv)
         
         if (!nhPrivate.param("sps", sps))
         {
-            sps = 44000;
+            sps = 16000;
         }
 
         // channels?
@@ -143,7 +146,7 @@ int main(int argc, char **argv)
 
         recognizer = IntentRecognizer::FromConfig(config, audioConfig);
 
-        g_microphone_audio_sub = nh.subscribe(g_microphoneTopic, 10, onAudio);
+        g_microphone_audio_sub = nh.subscribe(g_microphoneTopic, 1, onAudio);
     }
     else
     {
@@ -160,15 +163,15 @@ int main(int argc, char **argv)
         // Subscribes to events.
         recognizer->Recognizing.Connect([] (const IntentRecognitionEventArgs& e)
         {
-            ROS_DEBUG("Recognizing: %s", e.Result->Text.c_str());
+            ROS_INFO("Recognizing: %s", e.Result->Text.c_str());
         });
 
         recognizer->Recognized.Connect([] (const IntentRecognitionEventArgs& e)
         {
             if (e.Result->Reason == ResultReason::RecognizedIntent)
             {
-                ROS_DEBUG("RECOGNIZED: Text = %s", e.Result->Text.c_str());
-                ROS_DEBUG("Intent Id: %s", e.Result->IntentId.c_str());
+                ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
+                ROS_INFO("Intent Id: %s", e.Result->IntentId.c_str());
 
                 std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
 
@@ -177,7 +180,7 @@ int main(int argc, char **argv)
             }
             else if (e.Result->Reason == ResultReason::RecognizedSpeech)
             {
-                ROS_DEBUG("RECOGNIZED: Text= %s", e.Result->Text.c_str());
+                ROS_INFO("RECOGNIZED: Text= %s", e.Result->Text.c_str());
             }
             else if (e.Result->Reason == ResultReason::NoMatch)
             {
