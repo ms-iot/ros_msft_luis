@@ -25,7 +25,6 @@ using namespace Microsoft::CognitiveServices::Speech::Intent;
 std::string g_luisKey;
 std::string g_luisRegion;
 std::string g_luisAppId;
-std::string g_luisIntent;
 
 std::string g_microphoneTopic;
 
@@ -50,7 +49,10 @@ void parseAndPublishFromJson(std::string luisJson)
             {
                 auto value = json_value_get_string(intent_value);
                 intent.topIntent = value;
+
             }
+
+            intent.score = (float)json_object_get_number(topScoringIntent_object, "score"); 
         }
     }
 
@@ -70,12 +72,24 @@ int main(int argc, char **argv)
     ros::NodeHandle nhPrivate("~");
     std::promise<void> recognitionEnd;
 
-    g_luisKey = std::getenv("azure_cs_luis_key");
-    g_luisAppId = std::getenv("azure_cs_luis_appid");
-    g_luisRegion = std::getenv("azure_cs_luis_region");
-    g_luisIntent = std::getenv("azure_cs_luis_intent");
-    
+    const char* env = std::getenv("azure_cs_luis_key");
+    if (env != nullptr)
+    {
+        g_luisKey = env;
+    }
 
+    env = std::getenv("azure_cs_luis_appid");
+    if (env != nullptr)
+    {
+        g_luisAppId = env;
+    }
+
+    env = std::getenv("azure_cs_luis_region");
+    if (env != nullptr)
+    {
+        g_luisRegion = env;
+    }
+    
     // Parameters.
     if (g_luisKey.empty() ||
         nhPrivate.getParam("key", g_luisKey))
@@ -89,14 +103,6 @@ int main(int argc, char **argv)
         nhPrivate.getParam("region", g_luisRegion))
     {
         ROS_ERROR("luis region has not been set");
-        nh.shutdown();
-        return 0;
-    }
-
-    if (g_luisIntent.empty() ||
-        nhPrivate.getParam("intent", g_luisIntent))
-    {
-        ROS_ERROR("luis intent has not been set");
         nh.shutdown();
         return 0;
     }
@@ -130,7 +136,7 @@ int main(int argc, char **argv)
         
         if (!nhPrivate.param("sps", sps))
         {
-            sps = 44000;
+            sps = 16000;
         }
 
         // channels?
@@ -140,7 +146,7 @@ int main(int argc, char **argv)
 
         recognizer = IntentRecognizer::FromConfig(config, audioConfig);
 
-        g_microphone_audio_sub = nh.subscribe(g_microphoneTopic, 10, onAudio);
+        g_microphone_audio_sub = nh.subscribe(g_microphoneTopic, 1, onAudio);
     }
     else
     {
@@ -157,15 +163,15 @@ int main(int argc, char **argv)
         // Subscribes to events.
         recognizer->Recognizing.Connect([] (const IntentRecognitionEventArgs& e)
         {
-            ROS_DEBUG("Recognizing: %s", e.Result->Text.c_str());
+            ROS_INFO("Recognizing: %s", e.Result->Text.c_str());
         });
 
         recognizer->Recognized.Connect([] (const IntentRecognitionEventArgs& e)
         {
             if (e.Result->Reason == ResultReason::RecognizedIntent)
             {
-                ROS_DEBUG("RECOGNIZED: Text = %s", e.Result->Text.c_str());
-                ROS_DEBUG("Intent Id: %s", e.Result->IntentId.c_str());
+                ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
+                ROS_INFO("Intent Id: %s", e.Result->IntentId.c_str());
 
                 std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
 
@@ -174,7 +180,7 @@ int main(int argc, char **argv)
             }
             else if (e.Result->Reason == ResultReason::RecognizedSpeech)
             {
-                ROS_DEBUG("RECOGNIZED: Text= %s", e.Result->Text.c_str());
+                ROS_INFO("RECOGNIZED: Text= %s", e.Result->Text.c_str());
             }
             else if (e.Result->Reason == ResultReason::NoMatch)
             {
