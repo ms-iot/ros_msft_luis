@@ -1,0 +1,65 @@
+
+> LUIS application information
+> !# @app.name = ROS_Direction
+> !# @app.versionId = 0.1
+> !# @app.culture = en-us
+> !# @app.luis_schema_version = 7.0.0
+> !# @app.tokenizerVersion = 1.0.0
+
+
+> # Intent definitions
+
+## Move Backward
+- backup fast
+- backup slowly
+- move backward
+- move backward 3 inches
+- move backward 3 meters
+- move backward slowly
+- please move back 4 parsecs
+
+
+## Move forward
+- move forward 5 feet
+- move forward a couple of inches
+- move forward fast
+- move forward slowly
+- move forward until you hit a wall
+- move forward until you hit somthing
+
+
+## None
+
+
+## Turn Left
+- turn left 50 degrees
+- turn left slowly
+- turn left {@dimension}
+
+
+## Turn Right
+- turn right
+- turn right 50 degrees
+- turn right {@dimension}
+
+
+> # Entity definitions
+
+
+> # PREBUILT Entity definitions
+
+@ prebuilt dimension
+
+@ prebuilt keyPhrase
+
+@ prebuilt number
+
+
+> # Phrase list definitions
+
+
+> # List entities
+
+> # RegEx entities
+
+

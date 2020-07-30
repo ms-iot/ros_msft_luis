@@ -1,0 +1,339 @@
+
+> LUIS application information
+> !# @app.name = ROS_roam
+> !# @app.versionId = 1.0
+> !# @app.culture = en-us
+> !# @app.luis_schema_version = 7.0.0
+> !# @app.tokenizerVersion = 1.0.0
+
+
+> # Intent definitions
+
+## Close Hand
+- close gripper
+- close gripper fast
+- close gripper slow
+- close gripper slowly
+- close hand
+- close hand fast
+- close hand slow
+- close hand slowly
+- close wrist
+- close wrist fast
+- close wrist slow
+- close wrist slowly
+
+
+## Move Arm Backward
+- arm back
+- arm backwards
+- arm in
+- move arm 1 foot back
+- move arm 1 foot backward
+- move arm 1 inch back
+- move arm 1 inch backward
+- move arm back
+- move arm back fast
+- move arm back slow
+- move arm back slowly
+- move arm backward
+- move arm backward fast
+- move arm backward slow
+- move arm backward slowly
+- move arm backwards
+- move arm in
+- move arm in fast
+- move arm in slow
+- move arm in slowly
+- pull back arm
+- pull back arm fast
+- pull back arm slow
+- pull back arm slowly
+
+
+## Move Arm Down
+- arm down
+- arm down 1 inch
+- arm down fast
+- arm down slow
+- arm down slowly
+- lower arm
+- lower arm 1 foot
+- lower arm fast
+- lower arm slow
+- lower arm slowly
+- move arm 1 foot down
+- move arm 1 inch down
+- move arm down
+- move arm down fast
+- move arm down slow
+- move arm down slowly
+
+
+## Move Arm Forward
+- arm forward
+- arm out
+- arm out fast
+- arm out slow
+- arm out slowly
+- extend arm
+- extend arm fast
+- extend arm slow
+- extend arm slowly
+- move arm 1 foot forward
+- move arm 1 inch forward
+- move arm ahead
+- move arm ahead fast
+- move arm ahead slow
+- move arm ahead slowly
+- move arm forward
+- move arm forward fast
+- move arm forward slow
+- move arm forward slowly
+- move arm out
+- move arm staight
+
+
+## Move Arm Up
+- arm up
+- arm up fast
+- arm up slow
+- arm up slowly
+- lift arm
+- lift arm 1 foot
+- lift arm 1 inch
+- lift arm fast
+- lift arm slow
+- lift arm slowly
+- lift arm up
+- move arm up
+- move arm up 1 foot
+- move arm up 1 inch
+- move arm up fast
+- move arm up slow
+- move arm up slowly
+- raise arm
+- raise arm 1 foot
+- raise arm 1 inch
+- raise arm fast
+- raise arm slow
+- raise arm slowly
+- raise arm up
+- shift arm up
+
+
+## Move Backward
+- back
+- back away
+- back up
+- backup
+- backup fast
+- backup please
+- backup slowly
+- backward
+- drive back
+- drive back fast
+- drive back slow
+- drive back slowly
+- drive backward
+- drive backward fast
+- drive backward slow
+- drive backward slowly
+- go back
+- go back fast
+- go back slowly
+- move back
+- move back fast
+- move back slow
+- move backward
+- move backward 3 inches
+- move backward 3 meters
+- move backward fast
+- move backward slow
+- move backward slowly
+- move in reverse
+- please move back 4 parsecs
+- reverse
+- reverse fast
+- reverse slow
+- reverse slowly
+- step back
+- step back fast
+- step back slow
+- step back slowly
+- stop back until i say stop
+
+
+## Move forward
+- advance
+- advance fast
+- advance slow
+- advance slowly
+- drive forward
+- drive forward fast
+- drive forward slow
+- drive forward slowly
+- drive up
+- drive up fast
+- drive up slow
+- drive up slowly
+- forward
+- forward fast
+- forward move
+- forward slow
+- forward slowly
+- go forward
+- go forward fast
+- go forward slow
+- go forward slowly
+- move ahead
+- move forward
+- move forward 5 feet
+- move forward a couple of inches
+- move forward fast
+- move forward slowly
+- move forward until you hit a wall
+- move forward until you hit somthing
+- step forward
+- step up
+- step up fast
+- step up slow
+- step up slowly
+
+
+## None
+
+
+## Open Hand
+- open gripper
+- open gripper fast
+- open gripper slow
+- open gripper slowly
+- open hand
+- open hand fast
+- open hand slow
+- open hand slowly
+- open wrist
+- open wrist fast
+- open wrist slow
+- open wrist slowly
+- release hand
+- release hand fast
+- release hand slow
+- release hand slowly
+
+
+## Stop
+- break
+- bye
+- cancel move
+- close
+- exit
+- exit move
+- halt
+- hey robot stop
+- hold
+- pause
+- quit
+- shut down
+- stand
+- stay
+- stop
+- stop please
+- stop stop
+- stop walking
+- terminate
+
+
+## Turn Left
+- curve left
+- curve left fast
+- curve left slow
+- curve left slowly
+- left
+- left turn
+- left turn please
+- rotate left
+- rotate left fast
+- rotate left slow
+- rotate left slowly
+- spin left
+- spin left fast
+- spin left slow
+- spin left slowly
+- start left rotation
+- turn anticlockwise
+- turn left
+- turn left 50 degrees
+- turn left counterclockwise
+- turn left fast
+- turn left if there is space
+- turn left slow
+- turn left slowly
+- turn left until i say stop
+- twist left
+- twist left fast
+- twist left slow
+- twist left slowly
+- turn left {@dimension}
+
+
+## Turn Right
+- clockwise
+- curve right
+- curve right fast
+- curve right slow
+- curve right slowly
+- move right
+- right
+- right clockwise
+- right fast
+- right rotation
+- right slow
+- right slowly
+- right turn
+- right turn until i say stop
+- rotate right
+- rotate right fast
+- rotate right slow
+- rotate right slowly
+- spin right
+- spin right fast
+- spin right slow
+- spin right slowly
+- start right rotation
+- turn clockwise
+- turn right
+- turn right 50 degree
+- turn right 50 degrees
+- turn right clockwise
+- turn right fast
+- turn right slow
+- turn right slowly
+- twist right
+- twist right fast
+- twist right slow
+- twist right slowly
+- turn right {@dimension}
+
+
+> # Entity definitions
+
+
+> # PREBUILT Entity definitions
+
+@ prebuilt dimension
+
+@ prebuilt keyPhrase
+
+@ prebuilt number
+
+
+> # Phrase list definitions
+
+
+> # List entities
+
+> # RegEx entities
+
+
