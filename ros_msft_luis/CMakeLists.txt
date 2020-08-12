@@ -66,15 +66,14 @@ if(MSVC)
   if(NOT NUGET)
       message(FATAL "CMake could not find the nuget command line tool. Please install it from nuget.org")
   else()
-    execute_process(COMMAND ${NUGET} restore ${CMAKE_CURRENT_BINARY_DIR}/packages.config -PackagesDirectory ${CMAKE_CURRENT_BINARY_DIR})
+    execute_process(COMMAND ${NUGET} restore ${CMAKE_CURRENT_SOURCE_DIR}/src/packages.config -PackagesDirectory ${CMAKE_CURRENT_BINARY_DIR})
 
     include_directories(
       ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/c_api
       ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/cxx_api
     )
-    target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib)
 
-    add_dependencies(${PROJECT_NAME}_node nuget-restore)
+    target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib)
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/packages.config ${CMAKE_CURRENT_BINARY_DIR}/packages.config COPYONLY)
     configure_file(${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/runtimes/win-x64/native/Microsoft.CognitiveServices.Speech.core.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.core.dll COPYONLY)
