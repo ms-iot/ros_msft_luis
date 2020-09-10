@@ -25,6 +25,7 @@ using namespace Microsoft::CognitiveServices::Speech::Intent;
 std::string g_luisKey;
 std::string g_luisRegion;
 std::string g_luisAppId;
+std::string g_luisEndpoint;
 
 std::string g_microphoneTopic;
 
@@ -151,6 +152,12 @@ int main(int argc, char **argv)
     {
         g_luisKey = env;
     }
+    
+    env = std::getenv("azure_cs_luis_endpoint");
+    if (env != nullptr)
+    {
+        g_luisEndpoint = env;
+    }
 
     env = std::getenv("azure_cs_luis_appid");
     if (env != nullptr)
@@ -189,6 +196,11 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    if (g_luisEndpoint.empty())
+    {
+        nh.getParam("Endpoint", g_luisEndpoint);
+    }
+
     double scoreParam;
     if (nh.getParam("min_score", scoreParam))
     {
@@ -200,7 +212,15 @@ int main(int argc, char **argv)
 
     // Creates an instance of a speech config with specified subscription key and service region.
     // Replace with your own subscription key and service region (e.g., "westus").
-    auto config = SpeechConfig::FromSubscription(g_luisKey.c_str(), g_luisRegion.c_str());
+    std::shared_ptr<SpeechConfig> config;
+    if (g_luisEndpoint.empty())
+    {
+        config = SpeechConfig::FromSubscription(g_luisKey.c_str(), g_luisRegion.c_str());
+    }
+    else
+    {
+        config = SpeechConfig::FromEndpoint(g_luisEndpoint.c_str(), g_luisKey.c_str());
+    }
 
     std::shared_ptr<IntentRecognizer> recognizer;
 

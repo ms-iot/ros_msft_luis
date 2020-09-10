@@ -1,0 +1,6 @@
+<launch>
+  <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
+    <param name="Endpoint" value="<endpoint>" />
+    <param name="key" value="<luis key>" />
+  </node>
+</launch>
