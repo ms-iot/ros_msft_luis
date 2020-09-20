@@ -173,7 +173,7 @@ int main(int argc, char **argv)
     
     // Parameters.
     if (g_luisKey.empty() ||
-        nhPrivate.getParam("key", g_luisKey))
+        !nhPrivate.getParam("key", g_luisKey))
     {
         ROS_ERROR("luis key has not been set");
         nh.shutdown();
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     }
     
     if (g_luisRegion.empty() ||
-        nhPrivate.getParam("region", g_luisRegion))
+        !nhPrivate.getParam("region", g_luisRegion))
     {
         ROS_ERROR("luis region has not been set");
         nh.shutdown();
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
     }
 
     if (g_luisAppId.empty() ||
-        nh.getParam("AppId", g_luisAppId))
+        !nh.getParam("AppId", g_luisAppId))
     {
         ROS_ERROR("luis AppId has not been set");
         nh.shutdown();
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 
     if (g_luisEndpoint.empty())
     {
-        nh.getParam("Endpoint", g_luisEndpoint);
+        nhPrivate.getParam("endpoint", g_luisEndpoint);
     }
 
     double scoreParam;
