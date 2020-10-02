@@ -71,6 +71,7 @@ set azure_cs_luis_appid=<guid from your model's appid>
 set azure_cs_luis_key=<long number from your subscription>
 set azure_cs_luis_region=<region it was deployed in>
 ```
+> NOTE: You can use the command `setx` instead of `set` to save this to the system environment. However, you'll have to recycle your command window. 
 
 Ubuntu:
 ``` bash
@@ -78,6 +79,7 @@ export azure_cs_luis_appid=guid from your model appid
 export azure_cs_luis_key=long number from your subscription
 export azure_cs_luis_region=region it was deployed
 ```
+> NOTE: You may wish to place this in your .shellrc file so it is available in each terminal. 
 
 ```
 roslaunch ros_msft_luis luis.launch
@@ -93,6 +95,57 @@ If you would like to use a custom microphone, such as the Respeaker which is ava
 </launch>
 ```
 
+### Using a LUIS Container with ROS
+The Azure Lanugage Understanding Service (LUIS) supports edge deployments using a container. This model can be deployed directly to the robot if there is sufficient resources, or can be deployed to an edge server or kubernetes cluster.
+
+The language model you have defined is exported from the Azure LUIS portal and injected into the container when started. This container exposes an endpoint in the form of a web url like `http://localhost:5000`. In order for the ROS node to use this endpoint, it must be configured via an environment variable (which is shared by all ROS LUIS instances) or by launch file (which could allow multiple concurrent language models).
+
+Please refer to the [documentation for using a LUIS Container](https://docs.microsoft.com/en-us/azure/cognitive-services/LUIS/luis-container-howto?tabs=v3).
+
+If you chose to use an environment variable, it can be configured in your launch shell or in the system by setting the following environment variables:
+Windows:
+``` batch
+set azure_cs_luis_appid=<guid from your model's appid>
+set azure_cs_luis_key=<long number from your subscription>
+set azure_cs_luis_region=<region it was deployed in>
+set azure_cs_luis_endpoint=<region it was deployed in>
+```
+
+Ubuntu:
+``` bash
+export azure_cs_luis_appid=<guid from your model appid>
+export azure_cs_luis_key=<long number from your subscription>
+export azure_cs_luis_region=<region it was deployed>
+export azure_cs_luis_endpoint=<http://...:port>
+```
+
+You can also specify the endpoint parameters in xml:
+
+``` xml
+<launch>
+  <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
+    <param name="endpoint" value="<endpoint>" />
+    <param name="key" value="<luis key>" />
+    <param name="region" value="<luis reguin>" />
+    <param name="appid" value="<luis appid>" />
+  </node>
+</launch>
+```
+
+Before launching the ROS node, start the LUIS container. In this case, the exported language model has been downloaded into the ROS workspace root `c:\ws\luis_ws`, and mounted into the `/input` and `/output` directory. (The Language model is an input, logs are output).
+
+``` batch
+docker run --rm -it -p 5000:5000 ^
+--memory 4g ^
+--cpus 2 ^
+--mount type=bind,src=c:\ws\luis_ws,target=/input ^
+--mount type=bind,src=c:\ws\luis_ws,target=/output ^
+mcr.microsoft.com/azure-cognitive-services/luis ^
+Eula=accept ^
+Billing=https://westus.api.cognitive.microsoft.com/ ^
+ApiKey=<your API key> ^
+Logging:Console:LogLevel:Default=Debug
+```
 
 ## Working with LUIS on ROS2
 *Coming in Fall 2020*
