@@ -19,7 +19,7 @@ wget https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -O c:\opt\ros\m
 
 mkdir c:\ws\luis_ws\src
 cd c:\ws\luis_ws\src
-git clone --recusive https://github.com/ms-iot/ros_msft_luis
+git clone --recursive https://github.com/ms-iot/ros_msft_luis
 git clone https://github.com/ms-iot/audio_common
 
 cd c:\ws\luis_ws
@@ -45,7 +45,7 @@ tar --strip 1 -xzf SpeechSDK-Linux.tar.gz -C "$SPEECHSDK_ROOT"
 
 mkdir ~/luis_ws/src
 cd ~/luis_ws/src
-git clone --recusive https://github.com/ms-iot/ros_msft_luis
+git clone --recursive https://github.com/ms-iot/ros_msft_luis
 
 cd ~/luis_ws
 catkin_make
