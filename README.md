@@ -3,6 +3,9 @@ This ROS node bridges between ROS and the Azure Language Understanding Service. 
 
 > NOTE: This ROS node is in preview.
 
+## CI Status
+![Windows CI](https://github.com/ms-iot/ros_msft_luis/workflows/CI/badge.svg)
+
 ## Working with LUIS on ROS1
 This ROS node works on ROS1 Melodic forward, with Linux and Windows.
 
