@@ -14,8 +14,6 @@ if(MSVC)
   add_compile_options(/wd4267)
   # WORKAROUND: ros/message_event.h(217): warning C4127: conditional expression is constant
   add_compile_options(/wd4127)
-  # WORKAROUND: parson/parson.c(62): warning C4232: nonstandard extension used: 'parson_malloc'
-  add_compile_options(/wd4232)
 endif()
 
 
@@ -27,16 +25,15 @@ find_package(catkin REQUIRED COMPONENTS
   ros_msft_luis_msgs
 )
 
-
-add_library(parson STATIC
-  parson/parson.c
-  parson/parson.h
-)
+find_package(unofficial-parson)
+if(unofficial-parson_FOUND)
+  message(STATUS "Found Parson")
+endif(unofficial-parson_FOUND)
 
 catkin_package(
 #  INCLUDE_DIRS include
   LIBRARIES 
-    ros_msft_luis
+    ros_msft_luis 
   CATKIN_DEPENDS 
     roscpp 
     roslib 
@@ -47,7 +44,6 @@ catkin_package(
 
 include_directories(
   include
-  parson
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -57,16 +53,18 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 if(MSVC)
   target_link_libraries(${PROJECT_NAME}_node 
     ${catkin_LIBRARIES}
-    parson
+    unofficial::parson::parson
     )
 
   message("Installing Microsoft Cognitive Services Nuget package")
 
-  find_program(NUGET nuget)
+  find_program(NUGET nuget PATHS C:\\opt\\ros\\melodic\\x64\\bin)
   if(NOT NUGET)
       message(FATAL "CMake could not find the nuget command line tool. Please install it from nuget.org")
   else()
     execute_process(COMMAND ${NUGET} restore ${CMAKE_CURRENT_SOURCE_DIR}/src/packages.config -PackagesDirectory ${CMAKE_CURRENT_BINARY_DIR})
+    #message(STATUS "the cmake current binary directory  " ${CMAKE_CURRENT_BINARY_DIR} "the binary directory" ${CMAKE_BINARY_DIR})
+    #message(STATUS "the cmake prefix path" ${CMAKE_PREFIX_PATH})
 
     include_directories(
       ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/c_api
@@ -99,7 +97,7 @@ else()
 
       target_link_libraries(${PROJECT_NAME}_node 
         ${catkin_LIBRARIES}
-        parson
+        unofficial::parson::parson
         libasound.so.2
         $ENV{SPEECHSDK_ROOT}/lib/${COG_ARCH}/libMicrosoft.CognitiveServices.Speech.core.so
         )
