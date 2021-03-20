@@ -172,7 +172,7 @@ int main(int argc, char **argv)
     }
     
     // Parameters.
-    if (g_luisKey.empty() ||
+    if (g_luisKey.empty() &&
         !nhPrivate.getParam("key", g_luisKey))
     {
         ROS_ERROR("luis key has not been set");
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
         return 0;
     }
     
-    if (g_luisRegion.empty() ||
+    if (g_luisRegion.empty() &&
         !nhPrivate.getParam("region", g_luisRegion))
     {
         ROS_ERROR("luis region has not been set");
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    if (g_luisAppId.empty() ||
+    if (g_luisAppId.empty() &&
         !nh.getParam("AppId", g_luisAppId))
     {
         ROS_ERROR("luis AppId has not been set");
