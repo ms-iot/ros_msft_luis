@@ -61,7 +61,14 @@ The Microsoft Azure Lanugage Understanding Service is an Azure cloud service, wh
 
 To get started, navigate to the [LUIS console](https://www.luis.ai/), to create a lanugage model.
 
-Once you have completed the model, you can train and publish to a production slot. This will require you to associate the model with a prediction resource on Azure. Once that has been completed, you can configure the ROS node.
+Once you have completed the model, you can train and publish to a production slot. This will require you to associate the model with a prediction resource on Azure. Once that has been completed, you can configure the ROS node. The ROS node requires the following information from the [LUIS console](https://www.luis.ai/)
+
+ APP ID -  In Manage Tab --> Settings --> App ID
+  
+ Primary Key - In the Manage Tab --> Azure Resources --> Prediction Resources --> Primary Key
+  
+ Location - In the Manage Tab --> Azure Resources --> Rediction Resources --> Location
+  
 
 The LUIS ROS node can be configured two ways - by embedded in the Azure resource keys in the launch file, or setting them in the environment.
 
@@ -70,17 +77,17 @@ The LUIS ROS node can be configured two ways - by embedded in the Azure resource
 
 Windows:
 ``` batch
-set azure_cs_luis_appid=<guid from your model's appid>
-set azure_cs_luis_key=<long number from your subscription>
-set azure_cs_luis_region=<region it was deployed in>
+set azure_cs_luis_appid=<Enter yur APP ID mentioned above>
+set azure_cs_luis_key=<Enter your Primary Key mentioned above>
+set azure_cs_luis_region=<Enter your location mentioned above>
 ```
 > NOTE: You can use the command `setx` instead of `set` to save this to the system environment. However, you'll have to recycle your command window. 
 
 Ubuntu:
 ``` bash
-export azure_cs_luis_appid=guid from your model appid
-export azure_cs_luis_key=long number from your subscription
-export azure_cs_luis_region=region it was deployed
+export azure_cs_luis_appid=<Enter yur APP ID mentioned above>
+export azure_cs_luis_key=<Enter your Primary Key mentioned above>
+export azure_cs_luis_region=<Enter your location mentioned above>
 ```
 > NOTE: You may wish to place this in your .shellrc file so it is available in each terminal. 
 
