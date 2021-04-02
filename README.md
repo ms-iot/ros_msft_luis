@@ -17,9 +17,6 @@ The Makefile for the LUIS ROS Node will download the LUIS SDK using Nuget.exe wh
 Please install ROS1 per the instructions at [Microsoft's ROS Landing page](http://aka.ms/ros)
 
 ``` batch
-choco install wget
-wget https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -O c:\opt\ros\melodic\x64\bin\nuget.exe
-
 mkdir c:\ws\luis_ws\src
 cd c:\ws\luis_ws\src
 git clone --recursive https://github.com/ms-iot/ros_msft_luis
@@ -32,19 +29,10 @@ devel\setup.bat
 
 ### Building on Ubuntu
 
-Before building the LUIS node on Linux, please install the LUIS Linux SDK per the [sample instructions](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/quickstart/cpp/linux/from-microphone)
-
 
 ``` batch
 sudo apt-get update
 sudo apt-get install build-essential libssl1.0.0 libasound2 wget
-
-mkdir ~/speechsdk
-export SPEECHSDK_ROOT="~/speechsdk"
-mkdir -p "$SPEECHSDK_ROOT"
-wget -O SpeechSDK-Linux.tar.gz https://aka.ms/csspeech/linuxbinary
-tar --strip 1 -xzf SpeechSDK-Linux.tar.gz -C "$SPEECHSDK_ROOT"
-
 
 mkdir ~/luis_ws/src
 cd ~/luis_ws/src

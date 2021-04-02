@@ -54,68 +54,50 @@ include_directories(
 add_executable(${PROJECT_NAME}_node src/azure_cs_luis.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+target_link_libraries(${PROJECT_NAME}_node 
+${catkin_LIBRARIES}
+parson
+)
+
+message("Installing Microsoft Cognitive Services Nuget package")
+
+set(SPEECH_RUNTIME "Microsoft.CognitiveServices.Speech.1.13.0")
+set(PACKAGE_URL "https://www.nuget.org/api/v2/package/Microsoft.CognitiveServices.Speech/1.13.0")
+set(PACKAGE_SHA512 "99f02ba2cb04d996cdad379c8fb01d4b32426d8c94e34ac28be751059bd1efc5b25d0adba8d2f762820681531a665b871fff248513f7b08a8f07aa2e29ccb627")
+
+file(DOWNLOAD
+    ${PACKAGE_URL}
+    ${CMAKE_CURRENT_BINARY_DIR}/speech.nuget
+    EXPECTED_HASH SHA512=${PACKAGE_SHA512}
+    SHOW_PROGRESS
+)
+
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}")
+
 if(MSVC)
-  target_link_libraries(${PROJECT_NAME}_node 
-    ${catkin_LIBRARIES}
-    parson
-    )
+  set(ARCH "win-x64" )
+  execute_process(COMMAND tar xvzf "${CMAKE_CURRENT_BINARY_DIR}/speech.nuget" 
+               WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}"
+               )
 
-  message("Installing Microsoft Cognitive Services Nuget package")
-
-  find_program(NUGET nuget)
-  if(NOT NUGET)
-      message(FATAL "CMake could not find the nuget command line tool. Please install it from nuget.org")
-  else()
-    execute_process(COMMAND ${NUGET} restore ${CMAKE_CURRENT_SOURCE_DIR}/src/packages.config -PackagesDirectory ${CMAKE_CURRENT_BINARY_DIR})
-
-    include_directories(
-      ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/c_api
-      ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/include/cxx_api
-    )
-
-    target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib)
-
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/packages.config ${CMAKE_CURRENT_BINARY_DIR}/packages.config COPYONLY)
-    configure_file(${CMAKE_CURRENT_BINARY_DIR}/Microsoft.CognitiveServices.Speech.1.13.0/runtimes/win-x64/native/Microsoft.CognitiveServices.Speech.core.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.core.dll COPYONLY)
-  endif()
 else()
-  if(EXISTS "$ENV{SPEECHSDK_ROOT}/include/c_api/speechapi_c.h")
- 
-      include_directories(
-        $ENV{SPEECHSDK_ROOT}/include/c_api
-        $ENV{SPEECHSDK_ROOT}/include/cxx_api
-      )
+  set(ARCH "linux-x64")
+  execute_process(COMMAND unzip "${CMAKE_CURRENT_BINARY_DIR}/speech.nuget" 
+               WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}"
+               )
 
-      if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
-        set(COG_ARCH "arm64")
-      else()
-        set(COG_ARCH "x64")
-      endif()
-
-      find_package( PATHS )
-
-
-      message("Speech SDK Link - $ENV{SPEECHSDK_ROOT}/lib/${COG_ARCH}")
-
-      target_link_libraries(${PROJECT_NAME}_node 
-        ${catkin_LIBRARIES}
-        parson
-        libasound.so.2
-        $ENV{SPEECHSDK_ROOT}/lib/${COG_ARCH}/libMicrosoft.CognitiveServices.Speech.core.so
-        )
-
-  else()
-        message(FATAL "Please install and define SPEECHSDK_ROOT per the instructions at https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/quickstart/cpp/linux/from-microphone")
-  endif()
 endif()
 
-
-install(TARGETS ${PROJECT_NAME}_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+include_directories(
+  ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/build/native/include/c_api
+  ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/build/native/include/cxx_api
 )
 
-install(DIRECTORY launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+if(MSVC)
+  target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/Microsoft.CognitiveServices.Speech.core.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.core.dll COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.core.lib COPYONLY)
+else()
+  target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.core.so)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.core.so ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libMicrosoft.CognitiveServices.Speech.core.so COPYONLY)
+endif()
