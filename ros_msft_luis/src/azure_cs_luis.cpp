@@ -20,7 +20,6 @@ using namespace std;
 using namespace Microsoft::CognitiveServices::Speech;
 using namespace Microsoft::CognitiveServices::Speech::Audio;
 using namespace Microsoft::CognitiveServices::Speech::Intent;
-using namespace Microsoft::CognitiveServices::Speech::Dialog;
 
 std::string g_luisKey;
 std::string g_luisRegion;
@@ -148,10 +147,6 @@ void onAudio(const audio_common_msgs::AudioDataConstPtr &msg)
 // Keyword-triggered speech recognition using microphone.
 void intentRecognition()
 {
-    // Creates an instance of a speech config with specified subscription key and service region.
-    // Replace with your own subscription key and service region (e.g., "westus").
-    // Subscribes to events.
-
     std::shared_ptr<SpeechConfig> config;
     std::promise<void> recognitionEnd;
     if (g_luisEndpoint.empty())
