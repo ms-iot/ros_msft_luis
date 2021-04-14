@@ -12,7 +12,6 @@
 #include <parson.h>
 #include <audio_common_msgs/AudioData.h>
 
-
 #include <ros_msft_luis_msgs/Entity.h>
 #include <ros_msft_luis_msgs/Intent.h>
 #include <ros_msft_luis_msgs/TopIntent.h>
@@ -21,16 +20,23 @@ using namespace std;
 using namespace Microsoft::CognitiveServices::Speech;
 using namespace Microsoft::CognitiveServices::Speech::Audio;
 using namespace Microsoft::CognitiveServices::Speech::Intent;
+using namespace Microsoft::CognitiveServices::Speech::Dialog;
 
 std::string g_luisKey;
 std::string g_luisRegion;
 std::string g_luisAppId;
 std::string g_luisEndpoint;
+std::string g_kwKey;
+std::string g_kwRegion;
+std::string g_keyWordPath;
+std::string g_keyWord;
 
 std::string g_microphoneTopic;
-
 ros::Publisher g_intent_pub;
 ros::Subscriber g_microphone_audio_sub;
+
+int sps;
+int bps;
 
 std::shared_ptr<PushAudioInputStream> g_pushStream;
 
@@ -74,45 +80,44 @@ double g_minScore = 0.8;
 }
 */
 
-
 void parseAndPublishFromJson(std::string luisJson)
 {
     double score = 0.0;
     ros_msft_luis_msgs::TopIntent intent;
 
-    JSON_Value* root_value = json_parse_string(luisJson.c_str());
-    JSON_Object* root_object = json_value_get_object(root_value);
+    JSON_Value *root_value = json_parse_string(luisJson.c_str());
+    JSON_Object *root_object = json_value_get_object(root_value);
     if (root_object)
     {
         // is this "topScoringIntent": "Move Arm Backward" on root?
 
-        JSON_Object* topScoringIntent_object = json_object_dotget_object(root_object, "topScoringIntent");
+        JSON_Object *topScoringIntent_object = json_object_dotget_object(root_object, "topScoringIntent");
         if (topScoringIntent_object)
         {
             intent.topIntent = json_object_dotget_string(topScoringIntent_object, "intent");
             if (!intent.topIntent.empty())
             {
-                intent.score = (float)json_object_get_number(topScoringIntent_object, "score"); 
+                intent.score = (float)json_object_get_number(topScoringIntent_object, "score");
 
                 score = intent.score;
             }
             // Process the entities array
-            JSON_Array* entities_array = json_object_get_array(root_object, "entities");
+            JSON_Array *entities_array = json_object_get_array(root_object, "entities");
             if (entities_array)
             {
                 size_t count = json_array_get_count(entities_array);
                 for (size_t i = 0; i < count; i++)
                 {
-                    JSON_Object* entity_object = json_array_get_object(entities_array, i);
+                    JSON_Object *entity_object = json_array_get_object(entities_array, i);
                     if (entity_object)
                     {
                         std::string type = json_object_dotget_string(entity_object, "type");
                         if (type == "builtin.dimension")
                         {
-                            JSON_Object* resolution_object = json_object_dotget_object(entity_object, "resolution");
+                            JSON_Object *resolution_object = json_object_dotget_object(entity_object, "resolution");
                             if (resolution_object)
                             {
-                                float value = atof(json_object_dotget_string(resolution_object, "value")); 
+                                float value = atof(json_object_dotget_string(resolution_object, "value"));
                                 std::string unit = json_object_dotget_string(resolution_object, "unit");
 
                                 intent.dimension.value = value;
@@ -123,7 +128,7 @@ void parseAndPublishFromJson(std::string luisJson)
                 }
             }
 
-            intent.score = (float)json_object_get_number(topScoringIntent_object, "score"); 
+            intent.score = (float)json_object_get_number(topScoringIntent_object, "score");
         }
     }
 
@@ -137,7 +142,95 @@ void parseAndPublishFromJson(std::string luisJson)
 void onAudio(const audio_common_msgs::AudioDataConstPtr &msg)
 {
     // push stream signature is not const correct, but does not modify the buffer.
-    g_pushStream->Write(const_cast<uint8_t*>(&msg->data[0]), msg->data.size());
+    g_pushStream->Write(const_cast<uint8_t *>(&msg->data[0]), msg->data.size());
+}
+
+// Keyword-triggered speech recognition using microphone.
+void intentRecognition()
+{
+    // Creates an instance of a speech config with specified subscription key and service region.
+    // Replace with your own subscription key and service region (e.g., "westus").
+    // Subscribes to events.
+
+    std::shared_ptr<SpeechConfig> config;
+    std::promise<void> recognitionEnd;
+    if (g_luisEndpoint.empty())
+    {
+        config = SpeechConfig::FromSubscription(g_luisKey, g_luisRegion);
+    }
+    else
+    {
+        config = SpeechConfig::FromEndpoint(g_luisEndpoint, g_luisKey);
+    }
+
+    std::shared_ptr<IntentRecognizer> recognizer;
+
+    if (!g_microphoneTopic.empty())
+    {
+
+        auto streamFormat = AudioStreamFormat::GetWaveFormatPCM(sps, bps, 1);
+        g_pushStream = PushAudioInputStream::Create(streamFormat);
+        auto audioConfig = AudioConfig::FromStreamInput(g_pushStream);
+
+        recognizer = IntentRecognizer::FromConfig(config, audioConfig);
+    }
+    else
+    {
+        // Creates an intent recognizer using the default microphone as audio input.
+        recognizer = IntentRecognizer::FromConfig(config);
+    }
+
+    // Creates a Language Understanding model using the app id, and adds specific intents from your model
+    auto model = LanguageUnderstandingModel::FromAppId(g_luisAppId);
+    recognizer->AddAllIntents(model);
+
+    recognizer->Recognizing.Connect([](const IntentRecognitionEventArgs &e) {
+        ROS_INFO("Recognizing: %s", e.Result->Text.c_str());
+    });
+
+    recognizer->Recognized.Connect([&](const IntentRecognitionEventArgs &e) {
+        if (e.Result->Reason == ResultReason::RecognizedIntent)
+        {
+            ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
+            ROS_INFO("Intent Id: %s", e.Result->IntentId.c_str());
+
+            std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
+
+            ROS_INFO("JSON: %s", luisJson.c_str());
+            parseAndPublishFromJson(luisJson);
+            ROS_INFO("Say something starting with '%s' followed by whatever you want..." , g_keyWord.c_str());
+        }
+        else if (e.Result->Reason == ResultReason::RecognizedSpeech)
+        {
+            ROS_INFO("RECOGNIZED: Text= %s", e.Result->Text.c_str());
+        }
+        else if (e.Result->Reason == ResultReason::NoMatch)
+        {
+            ROS_DEBUG("NOMATCH: Speech could not be recognized.");
+        }
+    });
+
+    recognizer->Canceled.Connect([&recognitionEnd](const IntentRecognitionCanceledEventArgs &e) {
+        ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
+
+        if (e.Reason == CancellationReason::Error)
+        {
+            ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
+            ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
+            ROS_DEBUG("CANCELED: Did you update the subscription info?");
+        }
+
+        recognitionEnd.set_value(); // Notify to stop recognition.
+    });
+
+    recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) {
+        ROS_DEBUG("Session stopped.");
+        recognitionEnd.set_value(); // Notify to stop recognition.
+    });
+
+    recognizer->RecognizeOnceAsync();
+
+    recognitionEnd.get_future().get();
 }
 
 int main(int argc, char **argv)
@@ -147,12 +240,12 @@ int main(int argc, char **argv)
     ros::NodeHandle nhPrivate("~");
     std::promise<void> recognitionEnd;
 
-    const char* env = std::getenv("azure_cs_luis_key");
+    const char *env = std::getenv("azure_cs_luis_key");
     if (env != nullptr)
     {
         g_luisKey = env;
     }
-    
+
     env = std::getenv("azure_cs_luis_endpoint");
     if (env != nullptr)
     {
@@ -170,16 +263,39 @@ int main(int argc, char **argv)
     {
         g_luisRegion = env;
     }
-    
+
+    env = std::getenv("azure_cs_kw_key");
+    if (env != nullptr)
+    {
+        g_kwKey = env;
+    }
+
+    env = std::getenv("azure_cs_kw_region");
+    if (env != nullptr)
+    {
+        g_kwRegion = env;
+    }
+
+    env = std::getenv("azure_cs_kw_path");
+    if (env != nullptr)
+    {
+        g_keyWordPath = env;
+    }
+
+    env = std::getenv("azure_cs_kw");
+    if (env != nullptr)
+    {
+        g_keyWord = env;
+    }
     // Parameters.
     if (g_luisKey.empty() &&
-        !nhPrivate.getParam("key", g_luisKey))
+        !nhPrivate.getParam("luiskey", g_luisKey))
     {
         ROS_ERROR("luis key has not been set");
         nh.shutdown();
         return 0;
     }
-    
+
     if (g_luisRegion.empty() &&
         !nhPrivate.getParam("region", g_luisRegion))
     {
@@ -189,9 +305,41 @@ int main(int argc, char **argv)
     }
 
     if (g_luisAppId.empty() &&
-        !nh.getParam("AppId", g_luisAppId))
+        !nhPrivate.getParam("appid", g_luisAppId))
     {
         ROS_ERROR("luis AppId has not been set");
+        nh.shutdown();
+        return 0;
+    }
+
+    if (g_kwKey.empty() &&
+        !nhPrivate.getParam("kwkey", g_kwKey))
+    {
+        ROS_ERROR("luis KeyWord key has not been set");
+        nh.shutdown();
+        return 0;
+    }
+
+    if (g_kwRegion.empty() &&
+        !nhPrivate.getParam("kwregion", g_kwRegion))
+    {
+        ROS_ERROR("luis KeyWord region has not been set");
+        nh.shutdown();
+        return 0;
+    }
+
+    if (g_keyWord.empty() &&
+        !nhPrivate.getParam("keyword", g_keyWord))
+    {
+        ROS_ERROR("luis KeyWord value has not been set");
+        nh.shutdown();
+        return 0;
+    }
+
+    if (g_keyWordPath.empty() &&
+        !nhPrivate.getParam("keywordpath", g_keyWordPath))
+    {
+        ROS_ERROR("luis KeyWordPath has not been set");
         nh.shutdown();
         return 0;
     }
@@ -207,115 +355,79 @@ int main(int argc, char **argv)
         g_minScore = scoreParam;
     }
 
-    g_intent_pub = nh.advertise<ros_msft_luis_msgs::TopIntent>("intent", 1);
-
-
-    // Creates an instance of a speech config with specified subscription key and service region.
-    // Replace with your own subscription key and service region (e.g., "westus").
-    std::shared_ptr<SpeechConfig> config;
-    if (g_luisEndpoint.empty())
-    {
-        config = SpeechConfig::FromSubscription(g_luisKey.c_str(), g_luisRegion.c_str());
-    }
-    else
-    {
-        config = SpeechConfig::FromEndpoint(g_luisEndpoint.c_str(), g_luisKey.c_str());
-    }
-
-    std::shared_ptr<IntentRecognizer> recognizer;
-
     if (nh.getParam("mic_topic", g_microphoneTopic))
     {
-        int sps;
-        int bps;
-        
+
         if (!nhPrivate.getParam("bps", bps))
         {
             bps = 16;
         }
-        
+
         if (!nhPrivate.param("sps", sps))
         {
             sps = 16000;
         }
-
-        // channels?
-        auto streamFormat = AudioStreamFormat::GetWaveFormatPCM(sps, bps, 1);
-        g_pushStream = PushAudioInputStream::Create(streamFormat);
-        auto audioConfig = AudioConfig::FromStreamInput(g_pushStream);
-
-        recognizer = IntentRecognizer::FromConfig(config, audioConfig);
-
         g_microphone_audio_sub = nh.subscribe(g_microphoneTopic, 1, onAudio);
     }
-    else
-    {
-        // Creates an intent recognizer using the default microphone as audio input.
-        recognizer = IntentRecognizer::FromConfig(config);
-    }
 
-    // Creates a Language Understanding model using the app id, and adds specific intents from your model
-    auto model = LanguageUnderstandingModel::FromAppId(g_luisAppId);
-    recognizer->AddAllIntents(model);
+    g_intent_pub = nh.advertise<ros_msft_luis_msgs::TopIntent>("intent", 1);
+
+    auto config = SpeechConfig::FromSubscription(g_kwKey, g_kwRegion);
+
+    // Creates a speech recognizer using microphone as audio input. The default language is "en-us".
+    auto recognizer = SpeechRecognizer::FromConfig(config);
+
+    auto kwmodel = KeywordRecognitionModel::FromFile(g_keyWordPath);
 
     while (ros::ok())
     {
         // Subscribes to events.
-        recognizer->Recognizing.Connect([] (const IntentRecognitionEventArgs& e)
-        {
-            ROS_INFO("Recognizing: %s", e.Result->Text.c_str());
-        });
-
-        recognizer->Recognized.Connect([] (const IntentRecognitionEventArgs& e)
-        {
-            if (e.Result->Reason == ResultReason::RecognizedIntent)
+        recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs &e) {
+            if (e.Result->Reason == ResultReason::RecognizingKeyword)
             {
-                ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
-                ROS_INFO("Intent Id: %s", e.Result->IntentId.c_str());
-
-                std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
-
-                ROS_INFO("JSON: %s", luisJson.c_str());
-                parseAndPublishFromJson(luisJson);
-            }
-            else if (e.Result->Reason == ResultReason::RecognizedSpeech)
-            {
-                ROS_INFO("RECOGNIZED: Text= %s", e.Result->Text.c_str());
-            }
-            else if (e.Result->Reason == ResultReason::NoMatch)
-            {
-                ROS_DEBUG("NOMATCH: Speech could not be recognized.");
+                ROS_INFO("RECOGNIZING KEYWORD: Text= %s", e.Result->Text.c_str());
             }
         });
 
-        recognizer->Canceled.Connect([&recognitionEnd](const IntentRecognitionCanceledEventArgs& e)
-        {
-            ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
+        recognizer->Recognized.Connect([](const SpeechRecognitionEventArgs &e) {
+            if (e.Result->Reason == ResultReason::RecognizedKeyword)
+            {
+                ROS_INFO("RECOGNIZED KEYWORD: Text= %s", e.Result->Text.c_str());
+                intentRecognition();
+            }
+        });
+
+        recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
+            ROS_DEBUG("CANCELED: Reason=", (int)e.Reason);
 
             if (e.Reason == CancellationReason::Error)
             {
-                ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
-                ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
-                ROS_DEBUG("CANCELED: Did you update the subscription info?");
+                ROS_DEBUG("CANCELED: ErrorCode=", (int)e.ErrorCode);
+                ROS_DEBUG("CANCELED: ErrorDetails=", e.ErrorDetails.c_str());
+                ROS_DEBUG("CANCELED: Did you update the subscription info for the keyword?");
             }
+        });
+
+        recognizer->SessionStarted.Connect([&recognitionEnd](const SessionEventArgs &e) {
+            ROS_DEBUG("SESSIONSTARTED: SessionId= %s", e.SessionId.c_str());
+        });
+
+        recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) {
+            ROS_DEBUG("SESSIONSTOPPED: SessionId= %s", e.SessionId.c_str());
 
             recognitionEnd.set_value(); // Notify to stop recognition.
         });
 
-        recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs& e)
-        {
-            ROS_DEBUG("Session stopped.");
-            recognitionEnd.set_value(); // Notify to stop recognition.
-        });    
-        
-        recognizer->StartContinuousRecognitionAsync();
+        recognizer->StartKeywordRecognitionAsync(kwmodel);
 
+        ROS_INFO("Say something starting with '%s' followed by whatever you want..." , g_keyWord.c_str());
+
+        // Waits for a single successful keyword-triggered speech recognition (or error).
         recognitionEnd.get_future().get();
-
         ros::spin();
     }
-
-    recognizer->StopContinuousRecognitionAsync();
+    // Stops recognition.
+    recognizer->StopKeywordRecognitionAsync();
     nh.shutdown();
     return 0;
 }

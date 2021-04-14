@@ -61,9 +61,9 @@ parson
 
 message("Installing Microsoft Cognitive Services Nuget package")
 
-set(SPEECH_RUNTIME "Microsoft.CognitiveServices.Speech.1.13.0")
-set(PACKAGE_URL "https://www.nuget.org/api/v2/package/Microsoft.CognitiveServices.Speech/1.13.0")
-set(PACKAGE_SHA512 "99f02ba2cb04d996cdad379c8fb01d4b32426d8c94e34ac28be751059bd1efc5b25d0adba8d2f762820681531a665b871fff248513f7b08a8f07aa2e29ccb627")
+set(SPEECH_RUNTIME "Microsoft.CognitiveServices.Speech.1.16.0")
+set(PACKAGE_URL "https://www.nuget.org/api/v2/package/Microsoft.CognitiveServices.Speech/1.16.0")
+set(PACKAGE_SHA512 "395973ad434efac7d33166ad1f749ab1b20cd6d516faa789351f45895a4ded8dff3ee9d666bf686358fb062dc65cb48ad3ada8dc8a495910e9211aa32058d64a")
 
 file(DOWNLOAD
     ${PACKAGE_URL}
@@ -96,8 +96,18 @@ include_directories(
 if(MSVC)
   target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib)
   configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/Microsoft.CognitiveServices.Speech.core.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.core.dll COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/Microsoft.CognitiveServices.Speech.extension.audio.sys.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.extension.audio.sys.dll COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/Microsoft.CognitiveServices.Speech.extension.codec.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.extension.codec.dll COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/Microsoft.CognitiveServices.Speech.extension.kws.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.extension.kws.dll COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/Microsoft.CognitiveServices.Speech.extension.silk_codec.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.extension.silk_codec.dll COPYONLY)
   configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/build/native/x64/Release/Microsoft.CognitiveServices.Speech.core.lib ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Microsoft.CognitiveServices.Speech.core.lib COPYONLY)
 else()
   target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.core.so)
+  target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.extension.audio.sys.so)
+  target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.extension.codec.so)
+  target_link_libraries(${PROJECT_NAME}_node ${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.extension.kws.so)
   configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.core.so ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libMicrosoft.CognitiveServices.Speech.core.so COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.extension.audio.sys.so ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libMicrosoft.CognitiveServices.Speech.extension.audio.sys.so COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.extension.codec.so ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libMicrosoft.CognitiveServices.Speech.extension.codec.so COPYONLY)
+  configure_file(${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}/runtimes/${ARCH}/native/libMicrosoft.CognitiveServices.Speech.extension.kws.so ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/libMicrosoft.CognitiveServices.Speech.extension.kws.so COPYONLY)
 endif()
