@@ -17,9 +17,6 @@ The Makefile for the LUIS ROS Node will download the LUIS SDK using Nuget.exe wh
 Please install ROS1 per the instructions at [Microsoft's ROS Landing page](http://aka.ms/ros)
 
 ``` batch
-choco install wget
-wget https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -O c:\opt\ros\melodic\x64\bin\nuget.exe
-
 mkdir c:\ws\luis_ws\src
 cd c:\ws\luis_ws\src
 git clone --recursive https://github.com/ms-iot/ros_msft_luis
@@ -32,19 +29,10 @@ devel\setup.bat
 
 ### Building on Ubuntu
 
-Before building the LUIS node on Linux, please install the LUIS Linux SDK per the [sample instructions](https://github.com/Azure-Samples/cognitive-services-speech-sdk/tree/master/quickstart/cpp/linux/from-microphone)
-
 
 ``` batch
 sudo apt-get update
 sudo apt-get install build-essential libssl1.0.0 libasound2 wget
-
-mkdir ~/speechsdk
-export SPEECHSDK_ROOT="~/speechsdk"
-mkdir -p "$SPEECHSDK_ROOT"
-wget -O SpeechSDK-Linux.tar.gz https://aka.ms/csspeech/linuxbinary
-tar --strip 1 -xzf SpeechSDK-Linux.tar.gz -C "$SPEECHSDK_ROOT"
-
 
 mkdir ~/luis_ws/src
 cd ~/luis_ws/src
@@ -59,7 +47,7 @@ The Microsoft Azure Lanugage Understanding Service is an Azure cloud service, wh
 
 > NOTE: LUIS is available as a containerized deployment; instructions coming soon.
 
-To get started, navigate to the [LUIS console](https://www.luis.ai/), to create a lanugage model.
+To get started, navigate to the [LUIS console](https://www.luis.ai/), to create a lanugage model. To create your own keyword navigate to the [speech studio](https://speech.microsoft.com/) and create your keyword, download the .table file and place it in a known location. 
 
 Once you have completed the model, you can train and publish to a production slot. This will require you to associate the model with a prediction resource on Azure. Once that has been completed, you can configure the ROS node. The ROS node requires the following information from the [LUIS console](https://www.luis.ai/)
 
@@ -68,7 +56,15 @@ Once you have completed the model, you can train and publish to a production slo
  Primary Key - In the Manage Tab --> Azure Resources --> Prediction Resources --> Primary Key
   
  Location - In the Manage Tab --> Azure Resources --> Rediction Resources --> Location
+
+The ROS node requires the following information from the  portal of [speech studio](https://speech.microsoft.com/portal?noredirect=true)
+
+
+ Speech Resource Key
   
+ Region information example "westus" if it is "West US", "westus2" if it is "West US 2"
+
+
 
 The LUIS ROS node can be configured two ways - by embedded in the Azure resource keys in the launch file, or setting them in the environment.
 
@@ -77,17 +73,25 @@ The LUIS ROS node can be configured two ways - by embedded in the Azure resource
 
 Windows:
 ``` batch
-set azure_cs_luis_appid=<Enter yur APP ID mentioned above>
+set azure_cs_luis_appid=<Enter your APP ID mentioned above>
 set azure_cs_luis_key=<Enter your Primary Key mentioned above>
 set azure_cs_luis_region=<Enter your location mentioned above>
+set azure_cs_kw_key=<Enter your key mentioned above from the speech studio>
+set azure_cs_kw_region=<Enter your location mentioned above from the speech studio>
+set azure_cs_kw_path=<Enter the location of the of .table file that you downloaded from above>
+set azure_cs_kw=<Enter your custom keyword>
 ```
 > NOTE: You can use the command `setx` instead of `set` to save this to the system environment. However, you'll have to recycle your command window. 
 
 Ubuntu:
 ``` bash
-export azure_cs_luis_appid=<Enter yur APP ID mentioned above>
+export azure_cs_luis_appid=<Enter your APP ID mentioned above>
 export azure_cs_luis_key=<Enter your Primary Key mentioned above>
 export azure_cs_luis_region=<Enter your location mentioned above>
+export azure_cs_kw_key=<Enter your key mentioned above from the speech studio>
+export azure_cs_kw_region=<Enter your location mentioned above from the speech studio>
+export azure_cs_kw_path=<Enter the location of the of .table file that you downloaded from above>
+export azure_cs_kw=<Enter your custom keyword>
 ```
 > NOTE: You may wish to place this in your .shellrc file so it is available in each terminal. 
 
