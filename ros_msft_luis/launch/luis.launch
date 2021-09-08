@@ -1,4 +1,10 @@
 <launch>
+  <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_key)"/>
+  <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_endpoint)"/>
+  <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_appid)"/>
+  <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_region)"/>
+
+
   <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
     <param name="luiskey" value="Enter your Primary Key mentioned in the luis portal" />
     <param name="region" value="Enter your location mentioned in the luis portal" />
