@@ -3,6 +3,15 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include <ros/ros.h>
+#include <curl/curl.h>
+#include <resource_retriever/retriever.h>
+#include <audio_common_msgs/AudioData.h>
+
+#include <ros_msft_luis_msgs/Entity.h>
+#include <ros_msft_luis_msgs/Intent.h>
+#include <ros_msft_luis_msgs/TopIntent.h>
+
+
 #ifdef WIN32
 #include <windows.h>
 #endif
@@ -10,14 +19,6 @@
 #include <iostream>
 #include <speechapi_cxx.h>
 #include <parson.h>
-#include <curl/curl.h>
-#include <resource_retriever/retriever.h>
-
-#include <audio_common_msgs/AudioData.h>
-
-#include <ros_msft_luis_msgs/Entity.h>
-#include <ros_msft_luis_msgs/Intent.h>
-#include <ros_msft_luis_msgs/TopIntent.h>
 
 using namespace std;
 using namespace Microsoft::CognitiveServices::Speech;
@@ -314,127 +315,61 @@ int main(int argc, char **argv)
     ros::NodeHandle nhPrivate("~");
     std::promise<void> recognitionEnd;
 
-    const char *env = std::getenv("azure_cs_luis_key");
-    if (env != nullptr)
-    {
-        g_luisKey = env;
-    }
-
-    env = std::getenv("azure_cs_luis_endpoint");
-    if (env != nullptr)
-    {
-        g_luisEndpoint = env;
-    }
-
-    env = std::getenv("azure_cs_speech_endpoint");
-    if (env != nullptr)
-    {
-        g_speechEndpoint = env;
-    }
-
-    env = std::getenv("azure_cs_luis_appid");
-    if (env != nullptr)
-    {
-        g_luisAppId = env;
-    }
-
-    env = std::getenv("azure_cs_luis_region");
-    if (env != nullptr)
-    {
-        g_luisRegion = env;
-    }
-
-    env = std::getenv("azure_cs_kw_key");
-    if (env != nullptr)
-    {
-        g_kwKey = env;
-    }
-
-    env = std::getenv("azure_cs_kw_region");
-    if (env != nullptr)
-    {
-        g_kwRegion = env;
-    }
-
-    env = std::getenv("azure_cs_kw_path");
-    if (env != nullptr)
-    {
-        g_keyWordPath = env;
-    }
-
-    env = std::getenv("azure_cs_kw");
-    if (env != nullptr)
-    {
-        g_keyWord = env;
-    }
-    // Parameters.
-    if (g_luisKey.empty() &&
-        !nhPrivate.getParam("luiskey", g_luisKey))
+    if (!nhPrivate.getParam("luiskey", g_luisKey))
     {
         ROS_ERROR("luis key has not been set");
         nh.shutdown();
         return 0;
     }
 
-    if (g_luisRegion.empty() &&
-        !nhPrivate.getParam("region", g_luisRegion))
+    if (!nhPrivate.getParam("region", g_luisRegion))
     {
         ROS_ERROR("luis region has not been set");
         nh.shutdown();
         return 0;
     }
 
-    if (g_luisAppId.empty() &&
-        !nhPrivate.getParam("appid", g_luisAppId))
+    if (!nhPrivate.getParam("appid", g_luisAppId))
     {
         ROS_ERROR("luis AppId has not been set");
         nh.shutdown();
         return 0;
     }
 
-    if (g_kwKey.empty() &&
-        !nhPrivate.getParam("kwkey", g_kwKey))
+    if (!nhPrivate.getParam("kwkey", g_kwKey))
     {
         ROS_ERROR("luis KeyWord key has not been set");
         nh.shutdown();
         return 0;
     }
 
-    if (g_kwRegion.empty() &&
-        !nhPrivate.getParam("kwregion", g_kwRegion))
+    if (!nhPrivate.getParam("kwregion", g_kwRegion))
     {
         ROS_ERROR("luis KeyWord region has not been set");
         nh.shutdown();
         return 0;
     }
 
-    if (g_keyWord.empty() &&
-        !nhPrivate.getParam("keyword", g_keyWord))
+    if (!nhPrivate.getParam("keyword", g_keyWord))
     {
         ROS_ERROR("luis KeyWord value has not been set");
         nh.shutdown();
         return 0;
     }
 
-    if (g_keyWordPath.empty() &&
-        !nhPrivate.getParam("keywordpath", g_keyWordPath))
+    if (!nhPrivate.getParam("keywordpath", g_keyWordPath))
     {
         ROS_ERROR("luis KeyWordPath has not been set");
         nh.shutdown();
         return 0;
     }
 
-    if (g_luisEndpoint.empty())
-    {
-        nhPrivate.getParam("luisendpoint", g_luisEndpoint);
+    nhPrivate.getParam("luisendpoint", g_luisEndpoint);
+    nhPrivate.getParam("speechendpoint", g_speechEndpoint);
     }
 
-    if (g_speechEndpoint.empty())
+    if ((g_luisEndpoint.empty() && !g_speechEndpoint.empty()) || (!g_luisEndpoint.empty() && g_speechEndpoint.empty())) 
     {
-        nhPrivate.getParam("speechendpoint", g_speechEndpoint);
-    }
-
-    if ((g_luisEndpoint.empty() && !g_speechEndpoint.empty()) || (!g_luisEndpoint.empty() && g_speechEndpoint.empty())) {
         ROS_ERROR("To use containers, both luisendpoint and speechendpoint must be set");
         nh.shutdown();
         return 0;
@@ -473,14 +408,16 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         // Subscribes to events.
-        recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs &e) {
+        recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs &e) 
+        {
             if (e.Result->Reason == ResultReason::RecognizingKeyword)
             {
                 ROS_INFO("RECOGNIZING KEYWORD: Text= %s", e.Result->Text.c_str());
             }
         });
 
-        recognizer->Recognized.Connect([](const SpeechRecognitionEventArgs &e) {
+        recognizer->Recognized.Connect([](const SpeechRecognitionEventArgs &e) 
+        {
             if (e.Result->Reason == ResultReason::RecognizedKeyword)
             {
                 ROS_INFO("RECOGNIZED KEYWORD: Text= %s", e.Result->Text.c_str());
@@ -492,7 +429,8 @@ int main(int argc, char **argv)
             }
         });
 
-        recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
+        recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) 
+        {
             ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
 
             if (e.Reason == CancellationReason::Error)
@@ -503,11 +441,13 @@ int main(int argc, char **argv)
             }
         });
 
-        recognizer->SessionStarted.Connect([&recognitionEnd](const SessionEventArgs &e) {
+        recognizer->SessionStarted.Connect([&recognitionEnd](const SessionEventArgs &e) 
+        {
             ROS_DEBUG("SESSIONSTARTED: SessionId= %s", e.SessionId.c_str());
         });
 
-        recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) {
+        recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) 
+        {
             ROS_DEBUG("SESSIONSTOPPED: SessionId= %s", e.SessionId.c_str());
 
             recognitionEnd.set_value(); // Notify to stop recognition.

@@ -1,17 +1,23 @@
 <launch>
-  <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_key)"/>
+  <arg name="azure_cs_luis_key" default="$(env azure_cs_luis_key)"/>
   <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_endpoint)"/>
-  <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_appid)"/>
-  <arg name="azure_cs_luis_endpoint" default="$(env azure_cs_luis_region)"/>
+  <arg name="azure_cs_luis_appid" default="$(env azure_cs_luis_appid)"/>
+  <arg name="azure_cs_luis_region" default="$(env azure_cs_luis_region)"/>
 
+  <arg name="azure_cs_kw_key" default="$(env azure_cs_kw_key)"/>
+  <arg name="azure_cs_kw" default="$(env azure_cs_kw)"/>
+  <arg name="azure_cs_kw_path" default="$(env azure_cs_kw_path)"/>
+  <arg name="azure_cs_kw_region" default="$(env azure_cs_kw_region)"/>
 
   <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
-    <param name="luiskey" value="Enter your Primary Key mentioned in the luis portal" />
-    <param name="region" value="Enter your location mentioned in the luis portal" />
-    <param name="appid" value="Enter your APP ID mentioned in the luis portal" />
-    <param name="kwkey" value="Enter your key mentioned in the speech studio" />
-    <param name="kwregion" value="Enter your location mentioned in the speech studio" />
-    <param name="keywordpath" value="Enter the location of the of .table file that you downloaded from the speech studio" />
-    <param name="keyword" value="Enter your custom keyword" />
+    <param name="luiskey" value="$(arg robotId)" />
+    <param name="region" value="$(arg azure_cs_luis_region)" />
+    <param name="appid" value="$(arg azure_cs_luis_appid)" />
+    <param name="endpoint" value="$(arg azure_cs_luis_endpoint)" />
+    
+    <param name="kwkey" value="$(arg azure_cs_kw_key)" />
+    <param name="kwregion" value="$(arg azure_cs_kw_region)" />
+    <param name="keywordpath" value="$(arg azure_cs_kw_path)" />
+    <param name="keyword" value="$(arg azure_cs_kw)" />
   </node>
 </launch>
