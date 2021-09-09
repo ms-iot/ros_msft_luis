@@ -215,6 +215,7 @@ void intentRecognitionOffline()
             std::string intents_json = get_intents(e.Result->Text);
             if (!intents_json.empty()) {
                 ROS_INFO("INTENT: %s", intents_json.c_str());
+                parseAndPublishFromJson(intents_json);
             }
         }
         else if (e.Result->Reason == ResultReason::NoMatch) {
