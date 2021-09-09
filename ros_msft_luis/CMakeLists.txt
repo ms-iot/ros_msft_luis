@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   audio_common_msgs
   ros_msft_luis_msgs
+  resource_retriever
 )
 
 
@@ -43,6 +44,7 @@ catkin_package(
     std_msgs 
     audio_common_msgs
     ros_msft_luis_msgs
+    resource_retriever
 )
 
 include_directories(

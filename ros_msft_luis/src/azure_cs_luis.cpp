@@ -10,6 +10,8 @@
 #include <iostream>
 #include <speechapi_cxx.h>
 #include <parson.h>
+#include <resource_retriever/retriever.h>
+
 #include <audio_common_msgs/AudioData.h>
 
 #include <ros_msft_luis_msgs/Entity.h>
@@ -144,6 +146,104 @@ void onAudio(const audio_common_msgs::AudioDataConstPtr &msg)
     g_pushStream->Write(const_cast<uint8_t *>(&msg->data[0]), msg->data.size());
 }
 
+// URL encoding.
+// https://stackoverflow.com/a/17708801/212303
+string url_encode(const string &value) {
+    ostringstream escaped;
+    escaped.fill('0');
+    escaped << hex;
+
+    for (string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+        string::value_type c = (*i);
+
+        // Keep alphanumeric and other accepted characters intact
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
+        }
+
+        // Any other characters are percent-encoded
+        escaped << uppercase;
+        escaped << '%' << setw(2) << int((unsigned char) c);
+        escaped << nouppercase;
+    }
+
+    return escaped.str();
+}
+
+// Call LUIS API to retrieve intents from a string of text.
+std::string get_intents(std::string text)
+{
+    resource_retriever::Retriever r;
+    resource_retriever::MemoryResource resource;
+
+    std::string url = \
+        "http://localhost:5001/luis/prediction/v3.0/apps/6bee8144-cfec-4373-808b-32310af7bd61/slots/production/predict?query=" + \
+        url_encode(text) + \
+        "&verbose=true&log=true";
+
+    try {
+        resource = r.get(url); 
+    } catch (resource_retriever::Exception& e) {
+        ROS_ERROR("Failed to retrieve file: %s", e.what());
+        return {};
+    }
+
+    std::string result((char *)resource.data.get(), resource.size);
+
+    return result;
+}
+
+// Intent recognition using local containers.
+void intentRecognitionOffline()
+{
+    std::shared_ptr<SpeechConfig> config;
+    std::promise<void> recognitionEnd;
+
+    config = SpeechConfig::FromEndpoint(g_luisEndpoint, g_luisKey);
+
+    auto audioConfig = AudioConfig::FromDefaultMicrophoneInput();
+    auto recognizer = SpeechRecognizer::FromConfig(config, audioConfig);
+
+    recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs& e) {
+        ROS_INFO("Recognizing: %s", e.Result->Text.c_str());
+    });
+
+    recognizer->Recognized.Connect([](const SpeechRecognitionEventArgs& e) {
+        if (e.Result->Reason == ResultReason::RecognizedSpeech) {
+            ROS_INFO("RECOGNIZED: Text=%s", e.Result->Text.c_str());
+            std::string intents_json = get_intents(e.Result->Text);
+            if (!intents_json.empty()) {
+                ROS_INFO("INTENT: %s", intents_json.c_str());
+            }
+        }
+        else if (e.Result->Reason == ResultReason::NoMatch) {
+            ROS_INFO("NOMATCH: Speech could not be recognized.");
+        }
+    });
+
+    recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs& e) {
+        ROS_INFO("CANCELED: Reason=%d", (int)e.Reason);
+        if (e.Reason == CancellationReason::Error) {
+            ROS_INFO("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
+            ROS_INFO("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
+            ROS_INFO("CANCELED: Did you update the speech key and location/region info?");
+
+            recognitionEnd.set_value(); // Notify to stop recognition.
+        }
+    });
+
+    recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs& e) {
+        ROS_INFO("Session stopped.");
+        recognitionEnd.set_value(); // Notify to stop recognition.
+    });
+
+    ROS_INFO("Speak into your microphone.");
+    auto result = recognizer->RecognizeOnceAsync();
+
+    recognitionEnd.get_future().get();
+}
+
 // Keyword-triggered speech recognition using microphone.
 void intentRecognition()
 {
@@ -186,7 +286,7 @@ void intentRecognition()
     recognizer->Recognized.Connect([&](const IntentRecognitionEventArgs &e) {
         if (e.Result->Reason == ResultReason::RecognizedIntent)
         {
-            ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
+            ROS_INFO("RECOGNIZED INTENT: Text = %s", e.Result->Text.c_str());
             ROS_INFO("Intent Id: %s", e.Result->IntentId.c_str());
 
             std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
@@ -197,7 +297,7 @@ void intentRecognition()
         }
         else if (e.Result->Reason == ResultReason::RecognizedSpeech)
         {
-            ROS_INFO("RECOGNIZED: Text= %s", e.Result->Text.c_str());
+            ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
         }
         else if (e.Result->Reason == ResultReason::NoMatch)
         {
@@ -388,17 +488,21 @@ int main(int argc, char **argv)
             if (e.Result->Reason == ResultReason::RecognizedKeyword)
             {
                 ROS_INFO("RECOGNIZED KEYWORD: Text= %s", e.Result->Text.c_str());
-                intentRecognition();
+                if (g_luisEndpoint.empty()) {
+                    intentRecognition();
+                } else {
+                    intentRecognitionOffline();
+                }
             }
         });
 
         recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
-            ROS_DEBUG("CANCELED: Reason=", (int)e.Reason);
+            ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
 
             if (e.Reason == CancellationReason::Error)
             {
-                ROS_DEBUG("CANCELED: ErrorCode=", (int)e.ErrorCode);
-                ROS_DEBUG("CANCELED: ErrorDetails=", e.ErrorDetails.c_str());
+                ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
+                ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
                 ROS_DEBUG("CANCELED: Did you update the subscription info for the keyword?");
             }
         });
