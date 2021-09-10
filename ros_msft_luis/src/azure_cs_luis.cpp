@@ -454,6 +454,12 @@ int main(int argc, char **argv)
         nhPrivate.getParam("speechendpoint", g_speechEndpoint);
     }
 
+    if ((g_luisEndpoint.empty() && !g_speechEndpoint.empty()) || (!g_luisEndpoint.empty() && g_speechEndpoint.empty())) {
+        ROS_ERROR("To use containers, both luisendpoint and speechendpoint must be set");
+        nh.shutdown();
+        return 0;
+    }
+
     double scoreParam;
     if (nh.getParam("min_score", scoreParam))
     {
