@@ -178,9 +178,8 @@ std::string get_intents(std::string text)
     resource_retriever::MemoryResource resource;
 
     std::string url = \
-        "http://localhost:5001/luis/prediction/v3.0/apps/6bee8144-cfec-4373-808b-32310af7bd61/slots/production/predict?query=" + \
-        url_encode(text) + \
-        "&verbose=true&log=true";
+        "http://localhost:5001/luis/v2.0/apps/6bee8144-cfec-4373-808b-32310af7bd61?q=" + \
+        url_encode(text);
 
     try {
         resource = r.get(url); 
