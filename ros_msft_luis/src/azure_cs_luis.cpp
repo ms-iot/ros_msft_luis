@@ -27,6 +27,7 @@ std::string g_luisKey;
 std::string g_luisRegion;
 std::string g_luisAppId;
 std::string g_luisEndpoint;
+std::string g_speechEndpoint;
 std::string g_kwKey;
 std::string g_kwRegion;
 std::string g_keyWordPath;
@@ -177,9 +178,7 @@ std::string get_intents(std::string text)
     resource_retriever::Retriever r;
     resource_retriever::MemoryResource resource;
 
-    std::string url = \
-        "http://localhost:5001/luis/v2.0/apps/6bee8144-cfec-4373-808b-32310af7bd61?q=" + \
-        url_encode(text);
+    std::string url = g_luisEndpoint + "/luis/v2.0/apps/" + g_luisAppId + "?q=" + url_encode(text);
 
     try {
         resource = r.get(url); 
@@ -199,7 +198,7 @@ void intentRecognitionOffline()
     std::shared_ptr<SpeechConfig> config;
     std::promise<void> recognitionEnd;
 
-    config = SpeechConfig::FromEndpoint(g_luisEndpoint, g_luisKey);
+    config = SpeechConfig::FromEndpoint(g_speechEndpoint);
 
     auto audioConfig = AudioConfig::FromDefaultMicrophoneInput();
     auto recognizer = SpeechRecognizer::FromConfig(config, audioConfig);
@@ -347,6 +346,12 @@ int main(int argc, char **argv)
         g_luisEndpoint = env;
     }
 
+    env = std::getenv("azure_cs_speech_endpoint");
+    if (env != nullptr)
+    {
+        g_speechEndpoint = env;
+    }
+
     env = std::getenv("azure_cs_luis_appid");
     if (env != nullptr)
     {
@@ -441,7 +446,12 @@ int main(int argc, char **argv)
 
     if (g_luisEndpoint.empty())
     {
-        nhPrivate.getParam("endpoint", g_luisEndpoint);
+        nhPrivate.getParam("luisendpoint", g_luisEndpoint);
+    }
+
+    if (g_speechEndpoint.empty())
+    {
+        nhPrivate.getParam("speechendpoint", g_speechEndpoint);
     }
 
     double scoreParam;
