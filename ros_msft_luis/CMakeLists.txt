@@ -45,6 +45,8 @@ catkin_package(
     audio_common_msgs
     ros_msft_luis_msgs
     resource_retriever
+  DEPENDS
+    curl
 )
 
 include_directories(
@@ -59,6 +61,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node 
 ${catkin_LIBRARIES}
 parson
+curl
 )
 
 message("Installing Microsoft Cognitive Services Nuget package")

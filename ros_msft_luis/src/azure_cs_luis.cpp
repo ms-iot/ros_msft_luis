@@ -10,6 +10,7 @@
 #include <iostream>
 #include <speechapi_cxx.h>
 #include <parson.h>
+#include <curl/curl.h>
 #include <resource_retriever/retriever.h>
 
 #include <audio_common_msgs/AudioData.h>
@@ -147,38 +148,18 @@ void onAudio(const audio_common_msgs::AudioDataConstPtr &msg)
     g_pushStream->Write(const_cast<uint8_t *>(&msg->data[0]), msg->data.size());
 }
 
-// URL encoding.
-// https://stackoverflow.com/a/17708801/212303
-string url_encode(const string &value) {
-    ostringstream escaped;
-    escaped.fill('0');
-    escaped << hex;
-
-    for (string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
-        string::value_type c = (*i);
-
-        // Keep alphanumeric and other accepted characters intact
-        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-            escaped << c;
-            continue;
-        }
-
-        // Any other characters are percent-encoded
-        escaped << uppercase;
-        escaped << '%' << setw(2) << int((unsigned char) c);
-        escaped << nouppercase;
-    }
-
-    return escaped.str();
-}
-
 // Call LUIS API to retrieve intents from a string of text.
 std::string get_intents(std::string text)
 {
     resource_retriever::Retriever r;
     resource_retriever::MemoryResource resource;
+    CURL *curl = curl_easy_init();
 
-    std::string url = g_luisEndpoint + "/luis/v2.0/apps/" + g_luisAppId + "?q=" + url_encode(text);
+    char* encoded_text = curl_easy_escape(curl, text.c_str(), 0);
+
+    std::string url = g_luisEndpoint + "/luis/v2.0/apps/" + g_luisAppId + "?q=" + encoded_text;
+
+    curl_free(encoded_text);
 
     try {
         resource = r.get(url); 
