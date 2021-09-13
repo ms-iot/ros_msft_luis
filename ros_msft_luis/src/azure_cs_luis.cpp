@@ -173,6 +173,25 @@ std::string get_intents(std::string text)
     return result;
 }
 
+// Get audio config.
+std::shared_ptr<AudioConfig> get_audio_config()
+{
+    std::shared_ptr<AudioConfig> audioConfig;
+
+    if (!g_microphoneTopic.empty())
+    {
+        auto streamFormat = AudioStreamFormat::GetWaveFormatPCM(sps, bps, 1);
+        g_pushStream = PushAudioInputStream::Create(streamFormat);
+        audioConfig = AudioConfig::FromStreamInput(g_pushStream);
+    }
+    else
+    {
+        audioConfig = AudioConfig::FromDefaultMicrophoneInput();
+    }
+
+    return audioConfig;
+}
+
 // Intent recognition using local containers.
 void intentRecognitionOffline()
 {
@@ -181,7 +200,7 @@ void intentRecognitionOffline()
 
     config = SpeechConfig::FromEndpoint(g_speechEndpoint);
 
-    auto audioConfig = AudioConfig::FromDefaultMicrophoneInput();
+    auto audioConfig = get_audio_config();
     auto recognizer = SpeechRecognizer::FromConfig(config, audioConfig);
 
     recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs& e) {
@@ -229,31 +248,11 @@ void intentRecognition()
 {
     std::shared_ptr<SpeechConfig> config;
     std::promise<void> recognitionEnd;
-    if (g_luisEndpoint.empty())
-    {
-        config = SpeechConfig::FromSubscription(g_luisKey, g_luisRegion);
-    }
-    else
-    {
-        config = SpeechConfig::FromEndpoint(g_luisEndpoint, g_luisKey);
-    }
 
-    std::shared_ptr<IntentRecognizer> recognizer;
+    config = SpeechConfig::FromSubscription(g_luisKey, g_luisRegion);
 
-    if (!g_microphoneTopic.empty())
-    {
-
-        auto streamFormat = AudioStreamFormat::GetWaveFormatPCM(sps, bps, 1);
-        g_pushStream = PushAudioInputStream::Create(streamFormat);
-        auto audioConfig = AudioConfig::FromStreamInput(g_pushStream);
-
-        recognizer = IntentRecognizer::FromConfig(config, audioConfig);
-    }
-    else
-    {
-        // Creates an intent recognizer using the default microphone as audio input.
-        recognizer = IntentRecognizer::FromConfig(config);
-    }
+    auto audioConfig = get_audio_config();
+    auto recognizer = IntentRecognizer::FromConfig(config, audioConfig);
 
     // Creates a Language Understanding model using the app id, and adds specific intents from your model
     auto model = LanguageUnderstandingModel::FromAppId(g_luisAppId);
