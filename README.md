@@ -109,47 +109,36 @@ If you would like to use a custom microphone, such as the Respeaker which is ava
 </launch>
 ```
 
-### Using a LUIS Container with ROS
-The Azure Lanugage Understanding Service (LUIS) supports edge deployments using a container. This model can be deployed directly to the robot if there is sufficient resources, or can be deployed to an edge server or kubernetes cluster.
+### Using containers with ROS
 
-The language model you have defined is exported from the Azure LUIS portal and injected into the container when started. This container exposes an endpoint in the form of a web url like `http://localhost:5000`. In order for the ROS node to use this endpoint, it must be configured via an environment variable (which is shared by all ROS LUIS instances) or by launch file (which could allow multiple concurrent language models).
+The Azure Cognitive Services support edge deployments using [containers](https://docs.microsoft.com/en-us/azure/cognitive-services/cognitive-services-container-support), including Speech-to-Text and Lanugage Understanding Service (LUIS). These models can be deployed directly to the robot if there are sufficient resources, or can be deployed to an edge server or Kubernetes cluster.
 
-Please refer to the [documentation for using a LUIS Container](https://docs.microsoft.com/en-us/azure/cognitive-services/LUIS/luis-container-howto?tabs=v3).
+**Starting the Speech-to-Text container**
 
-If you chose to use an environment variable, it can be configured in your launch shell or in the system by setting the following environment variables:
-Windows:
-``` batch
-set azure_cs_luis_appid=<guid from your model's appid>
-set azure_cs_luis_key=<long number from your subscription>
-set azure_cs_luis_region=<region it was deployed in>
-set azure_cs_luis_endpoint=<region it was deployed in>
+You will first need to run the Speech container. Please refer to the [documentation for using Speech Services containers](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/speech-container-howto?tabs=stt%2Ccsharp%2Csimple-format).
+
+You will need to select a local port to expose the Speech service; in this example, 5000.
+
+``` shell
+docker run --rm -it -p 5000:5000 \
+--memory 4g --cpus 4 \
+mcr.microsoft.com/azure-cognitive-services/speechservices/speech-to-text \
+Eula=accept \
+Billing=<your endpoint URI> \
+ApiKey=<your API key>
+
 ```
 
-Ubuntu:
-``` bash
-export azure_cs_luis_appid=<guid from your model appid>
-export azure_cs_luis_key=<long number from your subscription>
-export azure_cs_luis_region=<region it was deployed>
-export azure_cs_luis_endpoint=<http://...:port>
-```
+**Starting the LUIS container**
 
-You can also specify the endpoint parameters in xml:
+The language model you have defined is exported from the Azure LUIS portal and injected into the container when started. Please refer to the [documentation for using a LUIS Container](https://docs.microsoft.com/en-us/azure/cognitive-services/LUIS/luis-container-howto?tabs=v3).
 
-``` xml
-<launch>
-  <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
-    <param name="endpoint" value="<endpoint>" />
-    <param name="key" value="<luis key>" />
-    <param name="region" value="<luis reguin>" />
-    <param name="appid" value="<luis appid>" />
-  </node>
-</launch>
-```
+You will find below an example running the LUIS node using Docker. In this case, the exported language model has been downloaded into the ROS workspace root `c:\ws\luis_ws`, and mounted into the `/input` and `/output` directory. (the language model is an input, logs are output).
 
-Before launching the ROS node, start the LUIS container. In this case, the exported language model has been downloaded into the ROS workspace root `c:\ws\luis_ws`, and mounted into the `/input` and `/output` directory. (The Language model is an input, logs are output).
+Make sure to use a different local port than the one used for the Speech container: in this example, 5001.
 
 ``` batch
-docker run --rm -it -p 5000:5000 ^
+docker run --rm -it -p 5001:5000 ^
 --memory 4g ^
 --cpus 2 ^
 --mount type=bind,src=c:\ws\luis_ws,target=/input ^
@@ -161,7 +150,51 @@ ApiKey=<your API key> ^
 Logging:Console:LogLevel:Default=Debug
 ```
 
+**Starting the ROS node**
+
+The containers expose endpoints in the form of URLs like these:
+
+- LUIS: `http://localhost:5001`
+- Speech: `ws://localhost:5000/speech/recognition/conversation/cognitiveservices/v1`
+
+In order for the ROS node to use these endpoints, they must be configured via additional environment variables (which are shared by all ROS LUIS instances) or by ladditional parameters in the aunch file (which could allow multiple concurrent language models).
+
+Make sure to use the right local ports, defined when running the containers!
+
+If you chose to use environment variables, they can be configured in your launch shell or in the system by setting the following environment variables:
+
+Windows:
+
+``` batch
+set azure_cs_luis_endpoint=http://host:port
+set azure_cs_speech_endpoint=ws://host:port/speech/recognition/conversation/cognitiveservices/v1
+```
+
+Ubuntu:
+
+``` bash
+export azure_cs_luis_endpoint=http://host:port
+export azure_cs_speech_endpoint=ws://host:port/speech/recognition/conversation/cognitiveservices/v1
+```
+
+You can also specify the endpoint parameters in the XML launch file:
+
+``` xml
+<launch>
+  <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
+    <param name="luisendpoint" value="<endpoint>" />
+    <param name="speechendpoint" value="<endpoint>" />
+    <!-- other configuration parameters as defined above -->
+  </node>
+</launch>
+```
+
+You can then run the ROS node as previously.
+
+```
+roslaunch ros_msft_luis luis.launch
+```
+
 ## Working with LUIS on ROS2
+
 *Coming in Fall 2020*
-
-
