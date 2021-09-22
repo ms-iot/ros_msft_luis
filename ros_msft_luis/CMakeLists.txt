@@ -4,7 +4,7 @@ project(ros_msft_luis)
 if(MSVC)
   ## Compile as at least C++17 for cppwinrt
   add_compile_options(/Od)
-  add_compile_options(/std:c++latest)
+  add_compile_options(/std:c++17)
   add_compile_options(/await)
 
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -18,6 +18,17 @@ if(MSVC)
   add_compile_options(/wd4232)
 endif()
 
+include(FindCURL)
+if(NOT CURL_FOUND)
+  message("CURL not found!  Aborting...")
+  fail()
+endif(NOT CURL_FOUND)
+
+if (TARGET CURL::libcurl)
+  set(CURL_SHIM_LIBRARIES CURL::libcurl)
+else()
+  set(CURL_SHIM_LIBRARIES ${CURL_LIBRARIES})
+endif()
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -25,8 +36,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   audio_common_msgs
   ros_msft_luis_msgs
+  resource_retriever
 )
-
 
 add_library(parson STATIC
   parson/parson.c
@@ -43,6 +54,7 @@ catkin_package(
     std_msgs 
     audio_common_msgs
     ros_msft_luis_msgs
+    resource_retriever
 )
 
 include_directories(
@@ -57,6 +69,7 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node 
 ${catkin_LIBRARIES}
 parson
+${CURL_SHIM_LIBRARIES}
 )
 
 message("Installing Microsoft Cognitive Services Nuget package")

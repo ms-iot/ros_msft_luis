@@ -10,6 +10,9 @@
 #include <iostream>
 #include <speechapi_cxx.h>
 #include <parson.h>
+#include <curl/curl.h>
+#include <resource_retriever/retriever.h>
+
 #include <audio_common_msgs/AudioData.h>
 
 #include <ros_msft_luis_msgs/Entity.h>
@@ -25,6 +28,7 @@ std::string g_luisKey;
 std::string g_luisRegion;
 std::string g_luisAppId;
 std::string g_luisEndpoint;
+std::string g_speechEndpoint;
 std::string g_kwKey;
 std::string g_kwRegion;
 std::string g_keyWordPath;
@@ -144,36 +148,111 @@ void onAudio(const audio_common_msgs::AudioDataConstPtr &msg)
     g_pushStream->Write(const_cast<uint8_t *>(&msg->data[0]), msg->data.size());
 }
 
+// Call LUIS API to retrieve intents from a string of text.
+std::string get_intents(std::string text)
+{
+    resource_retriever::Retriever r;
+    resource_retriever::MemoryResource resource;
+    CURL *curl = curl_easy_init();
+
+    char* encoded_text = curl_easy_escape(curl, text.c_str(), 0);
+
+    std::string url = g_luisEndpoint + "/luis/v2.0/apps/" + g_luisAppId + "?q=" + encoded_text;
+
+    curl_free(encoded_text);
+
+    try {
+        resource = r.get(url); 
+    } catch (resource_retriever::Exception& e) {
+        ROS_ERROR("Failed to retrieve file: %s", e.what());
+        return {};
+    }
+
+    std::string result((char *)resource.data.get(), resource.size);
+
+    return result;
+}
+
+// Get audio config.
+std::shared_ptr<AudioConfig> get_audio_config()
+{
+    std::shared_ptr<AudioConfig> audioConfig;
+
+    if (!g_microphoneTopic.empty())
+    {
+        auto streamFormat = AudioStreamFormat::GetWaveFormatPCM(sps, bps, 1);
+        g_pushStream = PushAudioInputStream::Create(streamFormat);
+        audioConfig = AudioConfig::FromStreamInput(g_pushStream);
+    }
+    else
+    {
+        audioConfig = AudioConfig::FromDefaultMicrophoneInput();
+    }
+
+    return audioConfig;
+}
+
+// Intent recognition using local containers.
+void intentRecognitionOffline()
+{
+    std::shared_ptr<SpeechConfig> config;
+    std::promise<void> recognitionEnd;
+
+    config = SpeechConfig::FromEndpoint(g_speechEndpoint);
+
+    auto audioConfig = get_audio_config();
+    auto recognizer = SpeechRecognizer::FromConfig(config, audioConfig);
+
+    recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs& e) {
+        ROS_INFO("Recognizing: %s", e.Result->Text.c_str());
+    });
+
+    recognizer->Recognized.Connect([](const SpeechRecognitionEventArgs& e) {
+        if (e.Result->Reason == ResultReason::RecognizedSpeech) {
+            ROS_INFO("RECOGNIZED: Text=%s", e.Result->Text.c_str());
+            std::string intents_json = get_intents(e.Result->Text);
+            if (!intents_json.empty()) {
+                ROS_INFO("INTENT: %s", intents_json.c_str());
+                parseAndPublishFromJson(intents_json);
+            }
+        }
+        else if (e.Result->Reason == ResultReason::NoMatch) {
+            ROS_INFO("NOMATCH: Speech could not be recognized.");
+        }
+    });
+
+    recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs& e) {
+        ROS_INFO("CANCELED: Reason=%d", (int)e.Reason);
+        if (e.Reason == CancellationReason::Error) {
+            ROS_INFO("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
+            ROS_INFO("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
+            ROS_INFO("CANCELED: Did you update the speech key and location/region info?");
+
+            recognitionEnd.set_value(); // Notify to stop recognition.
+        }
+    });
+
+    recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs& e) {
+        ROS_INFO("Session stopped.");
+        recognitionEnd.set_value(); // Notify to stop recognition.
+    });
+
+    ROS_INFO("Speak into your microphone.");
+    auto result = recognizer->RecognizeOnceAsync();
+
+    recognitionEnd.get_future().get();
+}
+
 // Keyword-triggered speech recognition using microphone.
 void intentRecognition()
 {
     std::shared_ptr<SpeechConfig> config;
     std::promise<void> recognitionEnd;
-    if (g_luisEndpoint.empty())
-    {
-        config = SpeechConfig::FromSubscription(g_luisKey, g_luisRegion);
-    }
-    else
-    {
-        config = SpeechConfig::FromEndpoint(g_luisEndpoint, g_luisKey);
-    }
 
-    std::shared_ptr<IntentRecognizer> recognizer;
+    config = SpeechConfig::FromSubscription(g_luisKey, g_luisRegion);
 
-    if (!g_microphoneTopic.empty())
-    {
-
-        auto streamFormat = AudioStreamFormat::GetWaveFormatPCM(sps, bps, 1);
-        g_pushStream = PushAudioInputStream::Create(streamFormat);
-        auto audioConfig = AudioConfig::FromStreamInput(g_pushStream);
-
-        recognizer = IntentRecognizer::FromConfig(config, audioConfig);
-    }
-    else
-    {
-        // Creates an intent recognizer using the default microphone as audio input.
-        recognizer = IntentRecognizer::FromConfig(config);
-    }
+    auto audioConfig = get_audio_config();
+    auto recognizer = IntentRecognizer::FromConfig(config, audioConfig);
 
     // Creates a Language Understanding model using the app id, and adds specific intents from your model
     auto model = LanguageUnderstandingModel::FromAppId(g_luisAppId);
@@ -186,7 +265,7 @@ void intentRecognition()
     recognizer->Recognized.Connect([&](const IntentRecognitionEventArgs &e) {
         if (e.Result->Reason == ResultReason::RecognizedIntent)
         {
-            ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
+            ROS_INFO("RECOGNIZED INTENT: Text = %s", e.Result->Text.c_str());
             ROS_INFO("Intent Id: %s", e.Result->IntentId.c_str());
 
             std::string luisJson = e.Result->Properties.GetProperty(PropertyId::LanguageUnderstandingServiceResponse_JsonResult);
@@ -197,7 +276,7 @@ void intentRecognition()
         }
         else if (e.Result->Reason == ResultReason::RecognizedSpeech)
         {
-            ROS_INFO("RECOGNIZED: Text= %s", e.Result->Text.c_str());
+            ROS_INFO("RECOGNIZED: Text = %s", e.Result->Text.c_str());
         }
         else if (e.Result->Reason == ResultReason::NoMatch)
         {
@@ -245,6 +324,12 @@ int main(int argc, char **argv)
     if (env != nullptr)
     {
         g_luisEndpoint = env;
+    }
+
+    env = std::getenv("azure_cs_speech_endpoint");
+    if (env != nullptr)
+    {
+        g_speechEndpoint = env;
     }
 
     env = std::getenv("azure_cs_luis_appid");
@@ -341,7 +426,18 @@ int main(int argc, char **argv)
 
     if (g_luisEndpoint.empty())
     {
-        nhPrivate.getParam("endpoint", g_luisEndpoint);
+        nhPrivate.getParam("luisendpoint", g_luisEndpoint);
+    }
+
+    if (g_speechEndpoint.empty())
+    {
+        nhPrivate.getParam("speechendpoint", g_speechEndpoint);
+    }
+
+    if ((g_luisEndpoint.empty() && !g_speechEndpoint.empty()) || (!g_luisEndpoint.empty() && g_speechEndpoint.empty())) {
+        ROS_ERROR("To use containers, both luisendpoint and speechendpoint must be set");
+        nh.shutdown();
+        return 0;
     }
 
     double scoreParam;
@@ -388,17 +484,21 @@ int main(int argc, char **argv)
             if (e.Result->Reason == ResultReason::RecognizedKeyword)
             {
                 ROS_INFO("RECOGNIZED KEYWORD: Text= %s", e.Result->Text.c_str());
-                intentRecognition();
+                if (g_luisEndpoint.empty()) {
+                    intentRecognition();
+                } else {
+                    intentRecognitionOffline();
+                }
             }
         });
 
         recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
-            ROS_DEBUG("CANCELED: Reason=", (int)e.Reason);
+            ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
 
             if (e.Reason == CancellationReason::Error)
             {
-                ROS_DEBUG("CANCELED: ErrorCode=", (int)e.ErrorCode);
-                ROS_DEBUG("CANCELED: ErrorDetails=", e.ErrorDetails.c_str());
+                ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
+                ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
                 ROS_DEBUG("CANCELED: Did you update the subscription info for the keyword?");
             }
         });
