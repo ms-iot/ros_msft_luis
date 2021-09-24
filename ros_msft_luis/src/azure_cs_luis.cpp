@@ -131,6 +131,18 @@ void parseAndPublishFromJson(std::string luisJson)
                                 intent.dimension.value = value;
                                 intent.dimension.unit = unit;
                             }
+                        } else if (type == "builtin.number") {
+                            JSON_Object *resolution_object = json_object_dotget_object(entity_object, "resolution");
+                            if (resolution_object)
+                            {
+                                std::string value_string = json_object_dotget_string(resolution_object, "value");
+                                std::string subtype = json_object_dotget_string(resolution_object, "subtype");
+
+                                ros_msft_luis_msgs::Entity new_entity;
+                                new_entity.name = subtype;
+                                new_entity.value = value_string;
+                                intent.entities.push_back(new_entity);
+                            }
                         }
                     }
                 }
