@@ -366,7 +366,6 @@ int main(int argc, char **argv)
 
     nhPrivate.getParam("luisendpoint", g_luisEndpoint);
     nhPrivate.getParam("speechendpoint", g_speechEndpoint);
-    }
 
     if ((g_luisEndpoint.empty() && !g_speechEndpoint.empty()) || (!g_luisEndpoint.empty() && g_speechEndpoint.empty())) 
     {
