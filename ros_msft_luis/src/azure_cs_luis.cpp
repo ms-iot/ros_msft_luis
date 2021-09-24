@@ -120,7 +120,12 @@ void parseAndPublishFromJson(std::string luisJson)
                             JSON_Object *resolution_object = json_object_dotget_object(entity_object, "resolution");
                             if (resolution_object)
                             {
-                                float value = atof(json_object_dotget_string(resolution_object, "value"));
+                                float value = 0.0;
+                                const char* value_string = json_object_dotget_string(resolution_object, "value");
+
+                                if (value_string)
+                                    value = atof(value_string);
+
                                 std::string unit = json_object_dotget_string(resolution_object, "unit");
 
                                 intent.dimension.value = value;
