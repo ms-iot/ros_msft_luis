@@ -51,25 +51,21 @@ To get started, navigate to the [LUIS console](https://www.luis.ai/), to create 
 
 Once you have completed the model, you can train and publish to a production slot. This will require you to associate the model with a prediction resource on Azure. Once that has been completed, you can configure the ROS node. The ROS node requires the following information from the [LUIS console](https://www.luis.ai/)
 
- APP ID -  In Manage Tab --> Settings --> App ID
-  
- Primary Key - In the Manage Tab --> Azure Resources --> Prediction Resources --> Primary Key
-  
- Location - In the Manage Tab --> Azure Resources --> Rediction Resources --> Location
+In addition to the Lanugage Understanding service, you will also need to construct a keyword model on [Microsoft Speech Studio](https://speech.microsoft.com/portal?noredirect=true). Select *Custom Keyword* in the UI to create a Custom Keyword Project, and follow the instructions to create the model. 
 
-The ROS node requires the following information from the  portal of [speech studio](https://speech.microsoft.com/portal?noredirect=true)
+| ROS Variable | Where to get it | UI Path
+|--|--|--|
+|`azure_cs_luis_appid`  | [LUIS](https://www.luis.ai/) | Manage Tab -> Settings -> App ID | 
+|`azure_cs_luis_key`    | [LUIS](https://www.luis.ai/) | Manage Tab -> Azure Resources -> Prediction Resources -> Primary Key |
+|`azure_cs_luis_region` | [LUIS](https://www.luis.ai/) | Manage Tab -> Azure Resources -> Prediction Resources -> Location |
+|`azure_cs_kw_key` | [Speech Studio](https://speech.microsoft.com/portal?noredirect=true) | Gear Icon -> Resource -> Subscription Key |
+|`azure_cs_kw_path`| [Speech Studio](https://speech.microsoft.com/portal?noredirect=true) | Select the keyword resource -> Tune and Download Model |
+|`azure_cs_kw` | You create it | *Robot* |
 
-
- Speech Resource Key
-  
- Region information example "westus" if it is "West US", "westus2" if it is "West US 2"
-
-
+> Please note that the region needs to be lower case without spaces - for example, if the UI says "West US 2", please put "westus2"
 
 The LUIS ROS node can be configured two ways - by embedded in the Azure resource keys in the launch file, or setting them in the environment.
-
 > if you are committing launch files to an open source repo, it is best to use the environment method as to not leak your keys.
-
 
 Windows:
 ``` batch
