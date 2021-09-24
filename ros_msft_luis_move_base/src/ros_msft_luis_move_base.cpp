@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
+#include <tf/transform_datatypes.h>
+#include <angles/angles.h>
 
 #include <ros_msft_luis_msgs/Entity.h>
 #include <ros_msft_luis_msgs/Intent.h>
@@ -35,28 +37,31 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
         goal.target_pose.pose.position.x = msg->dimension.value;
         goal.target_pose.pose.orientation.w = 1.0;
     }
-    else if (intent == BACKWARD)
+    else if (intent == BACKWARD && msg->dimension.value != 0.0)
     {
         goal.target_pose.pose.position.x = -msg->dimension.value;
         goal.target_pose.pose.orientation.w = 1.0;
     }
-    else if (intent == RIGHT)
+    else if (intent == RIGHT || intent == LEFT)
     {
-        // TODO: extract angle from intent
-        // TODO: compute quaternion properly...
+        float angle;
 
-        // By default, turn 90 degrees
-        goal.target_pose.pose.orientation.z = -0.7071068;
-        goal.target_pose.pose.orientation.w = 0.7071068;
-    }
-    else if (intent == LEFT)
-    {
-        // TODO: extract angle from intent
-        // TODO: compute quaternion properly...
+        if (msg->entities.empty()) {
+            // By default, turn 90 degrees
+            angle = 90.0;
+        } else {
+            auto entity = msg->entities.at(0);
+            angle = stof(entity.value);
+        }
 
-        // By default, turn 90 degrees
-        goal.target_pose.pose.orientation.z = 0.7071068;
-        goal.target_pose.pose.orientation.w = 0.7071068;
+        if (intent == RIGHT)
+            angle = -angle;
+
+        auto q = tf::createQuaternionMsgFromYaw(angles::from_degrees(angle));
+        goal.target_pose.pose.orientation.x = q.x;
+        goal.target_pose.pose.orientation.y = q.y;
+        goal.target_pose.pose.orientation.z = q.z;
+        goal.target_pose.pose.orientation.w = q.w;
     }
     else
     {
