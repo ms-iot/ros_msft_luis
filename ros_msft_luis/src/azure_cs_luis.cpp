@@ -117,6 +117,7 @@ void parseAndPublishFromJson(std::string luisJson)
                         std::string type = json_object_dotget_string(entity_object, "type");
                         if (type == "builtin.dimension")
                         {
+                            // Convert builtin.dimension LUIS entity to message dimension
                             JSON_Object *resolution_object = json_object_dotget_object(entity_object, "resolution");
                             if (resolution_object)
                             {
@@ -131,7 +132,10 @@ void parseAndPublishFromJson(std::string luisJson)
                                 intent.dimension.value = value;
                                 intent.dimension.unit = unit;
                             }
-                        } else if (type == "builtin.number") {
+                        }
+                        else if (type == "builtin.number")
+                        {
+                            // Copy all builtin.number LUIS entities to message entities
                             JSON_Object *resolution_object = json_object_dotget_object(entity_object, "resolution");
                             if (resolution_object)
                             {

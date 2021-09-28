@@ -16,7 +16,8 @@ const std::string LEFT = "turn left";
 
 std::unique_ptr<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>> ac;
 
-std::string str_tolower(std::string s) {
+std::string str_tolower(std::string s)
+{
     std::transform(s.begin(), s.end(), s.begin(), 
                    [](unsigned char c){ return std::tolower(c); }
                   );
@@ -46,10 +47,13 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
     {
         float angle;
 
-        if (msg->entities.empty()) {
+        if (msg->entities.empty())
+        {
             // By default, turn 90 degrees
             angle = 90.0;
-        } else {
+        }
+        else
+        {
             auto entity = msg->entities.at(0);
             angle = stof(entity.value);
         }
