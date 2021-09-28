@@ -34,6 +34,9 @@ std::string g_kwRegion;
 std::string g_keyWordPath;
 std::string g_keyWord;
 
+std::string DeviceGeometry = ""; // Microphone array device geometry
+std::string SelectedGeometry = ""; // Microphone array selected device geometry
+
 std::string g_microphoneTopic;
 ros::Publisher g_intent_pub;
 ros::Subscriber g_microphone_audio_sub;
@@ -220,6 +223,12 @@ void intentRecognitionOffline()
     std::promise<void> recognitionEnd;
 
     config = SpeechConfig::FromEndpoint(g_speechEndpoint);
+
+    // If DeviceGeometry and SelectedGeometry are not empty, we are using the local microphone which is ReSpeaker Mic Array v2.0 (microphone arrays compliant)
+    if (!DeviceGeometry.empty() && !SelectedGeometry.empty()){
+        config.get()->SetProperty("DeviceGeometry", DeviceGeometry);
+        config.get()->SetProperty("SelectedGeometry", SelectedGeometry);
+    }
 
     auto audioConfig = get_audio_config();
     auto recognizer = SpeechRecognizer::FromConfig(config, audioConfig);
@@ -477,6 +486,7 @@ int main(int argc, char **argv)
         {
             sps = 16000;
         }
+
         g_microphone_audio_sub = nh.subscribe(g_microphoneTopic, 1, onAudio);
     }
 

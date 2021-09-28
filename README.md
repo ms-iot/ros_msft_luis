@@ -209,6 +209,15 @@ You can then run the ROS node as previously.
 roslaunch ros_msft_luis luis.launch
 ```
 
+### Microphone array support
+
+The LUIS Ros node supports two types of microphones:
+
+- External microphone topic from another node
+- Embedded microphone - which is [4 channel ReSpeaker MicArray V2.0](https://wiki.seeedstudio.com/ReSpeaker_Mic_Array_v2.0/)
+
+To enable the support of the Microphone array, you need to specify the `DeviceGeometry` and the `SelectedGeometry` variables in the [azure_cs_luis.cpp](./ros_msft_luis/src/azure_cs_luis.cpp) file.
+
 ## Working with LUIS on ROS2
 
 *Coming in Fall 2020*
