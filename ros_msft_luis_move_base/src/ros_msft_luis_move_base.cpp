@@ -13,6 +13,7 @@ const std::string FORWARD = "move forward";
 const std::string BACKWARD = "move backward";
 const std::string RIGHT = "turn right";
 const std::string LEFT = "turn left";
+const std::string STOP = "stop";
 
 std::unique_ptr<actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>> ac;
 
@@ -24,6 +25,26 @@ std::string str_tolower(std::string s)
     return s;
 }
 
+// Goal callback -- called once when the goal completes
+void doneCb(const actionlib::SimpleClientGoalState& state,
+            const move_base_msgs::MoveBaseResultConstPtr& result)
+{
+    ROS_INFO("Finished in state [%s]", state.toString().c_str());
+}
+
+// Goal callback -- called once when the goal becomes active
+void activeCb()
+{
+    ROS_INFO("Goal just went active");
+}
+
+// Goal callback -- called every time feedback is received for the goal
+void feedbackCb(const move_base_msgs::MoveBaseFeedbackConstPtr& feedback)
+{
+    //ROS_INFO("Feedback received");
+}
+
+// Intent callback -- called when an intent message is received
 void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
 {
     move_base_msgs::MoveBaseGoal goal;
@@ -67,20 +88,31 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
         goal.target_pose.pose.orientation.z = q.z;
         goal.target_pose.pose.orientation.w = q.w;
     }
+    else if (intent == STOP)
+    {
+        ROS_INFO("Canceling all goals");
+        ac->cancelAllGoals();
+    }
     else
     {
         ROS_WARN("Unknown intent, no move base goal will be sent.");
         return;
     }
 
-    ROS_INFO("Sending goal");
-    ac->sendGoal(goal);
-    ac->waitForResult();
+    if (intent != STOP)
+    {
+        // Cancel any pre-existing goal
+        if (ac->getState() == actionlib::SimpleClientGoalState::PENDING ||
+            ac->getState() == actionlib::SimpleClientGoalState::ACTIVE)
+        {
+            ROS_INFO("Canceling current goal");
+            ac->cancelGoal();
+            ac->waitForResult();
+        }
 
-    if (ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-        ROS_INFO("Move base goal has been completed.");
-    else
-        ROS_WARN("Move base goal has failed.");
+        ROS_INFO("Sending goal");
+        ac->sendGoal(goal, doneCb, activeCb, feedbackCb);
+    }
 }
 
 int main(int argc, char **argv)
