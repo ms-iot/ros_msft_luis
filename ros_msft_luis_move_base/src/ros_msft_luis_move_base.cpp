@@ -44,6 +44,28 @@ void feedbackCb(const move_base_msgs::MoveBaseFeedbackConstPtr& feedback)
     //ROS_INFO("Feedback received");
 }
 
+// Convert length to meters; unit is a singular form string, such as "meter", "foot".
+float to_meters(float value, std::string unit)
+{
+    unit = str_tolower(unit);
+
+    if (unit == "meter")
+    {
+        return value;
+    }
+    else if (unit == "foot")
+    {
+        return value * 0.3048;
+    }
+    else if (unit == "yard")
+    {
+        return value * 0.9144;
+    }
+
+    // Default value if unit unknown
+    return 0.0;
+}
+
 // Intent callback -- called when an intent message is received
 void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
 {
@@ -53,15 +75,20 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
 
     auto intent = str_tolower(msg->topIntent);
 
-    if (intent == FORWARD && msg->dimension.value != 0.0)
+    if ((intent == FORWARD || intent == BACKWARD) && msg->dimension.value != 0.0)
     {
-        // TODO: handle feet vs meters
-        goal.target_pose.pose.position.x = msg->dimension.value;
-        goal.target_pose.pose.orientation.w = 1.0;
-    }
-    else if (intent == BACKWARD && msg->dimension.value != 0.0)
-    {
-        goal.target_pose.pose.position.x = -msg->dimension.value;
+        float value_meters = to_meters(msg->dimension.value, msg->dimension.unit);
+
+        if (value_meters == 0.0)
+        {
+            ROS_WARN("Could not convert units to meters, no goal will be sent");
+            return;
+        }
+
+        if (intent == BACKWARD)
+            value_meters = -value_meters;
+
+        goal.target_pose.pose.position.x = value_meters;
         goal.target_pose.pose.orientation.w = 1.0;
     }
     else if (intent == RIGHT || intent == LEFT)
@@ -76,7 +103,15 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
         else
         {
             auto entity = msg->entities.at(0);
-            angle = stof(entity.value);
+            try
+            {
+                angle = stof(entity.value);
+            }
+            catch (std::exception& ex)
+            {
+                ROS_WARN("Could not convert angle to float, no goal will be sent");
+                return;
+            }
         }
 
         if (intent == RIGHT)
