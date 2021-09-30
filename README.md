@@ -109,9 +109,23 @@ If you would like to use a custom microphone, such as the Respeaker which is ava
 </launch>
 ```
 
+# Using the `move_base` node
+
+The `ros_msft_luis_move_base` node is provided to translate the intents into `move_base` navigation goals. It currently understands the following intents:
+
+- "Move Forward" / "Move Backward", followed by a distance expressed in meters, feet or yards. For example: "move forward 2 meters", "move backward 3 feet".
+- "Turn Left" / "Turn Right", followed by an angle expressed in degrees. For example: "turn left 34 degrees". If no angle is given, a default of 90 degrees will be used, so you can just say "turn right" for example.
+- "Stop", which cancels all current navigation.
+
+To launch the node, you can use the provided launch configuration:
+
+```
+roslaunch ros_msft_luis luis_move_base.launch
+```
+
 ### Using containers with ROS
 
-The Azure Cognitive Services support edge deployments using [containers](https://docs.microsoft.com/en-us/azure/cognitive-services/cognitive-services-container-support), including Speech-to-Text and Lanugage Understanding Service (LUIS). These models can be deployed directly to the robot if there are sufficient resources, or can be deployed to an edge server or Kubernetes cluster.
+The Azure Cognitive Services support edge deployments using [containers](https://docs.microsoft.com/en-us/azure/cognitive-services/cognitive-services-container-support), including Speech-to-Text and Language Understanding Service (LUIS). These models can be deployed directly to the robot if there are sufficient resources, or can be deployed to an edge server or Kubernetes cluster.
 
 **Starting the Speech-to-Text container**
 
