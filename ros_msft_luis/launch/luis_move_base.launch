@@ -1,0 +1,13 @@
+<launch>
+  <node name="luis_test" pkg="ros_msft_luis" type="ros_msft_luis_node" output="screen">
+    <param name="luiskey" value="Enter your Primary Key mentioned in the luis portal" />
+    <param name="region" value="Enter your location mentioned in the luis portal" />
+    <param name="appid" value="Enter your APP ID mentioned in the luis portal" />
+    <param name="kwkey" value="Enter your key mentioned in the speech studio" />
+    <param name="kwregion" value="Enter your location mentioned in the speech studio" />
+    <param name="keywordpath" value="Enter the location of the of .table file that you downloaded from the speech studio" />
+    <param name="keyword" value="Enter your custom keyword" />
+  </node>
+  <node name="luis_test_move_base" pkg="ros_msft_luis_move_base" type="ros_msft_luis_move_base_node" output="screen">
+  </node>
+</launch>
