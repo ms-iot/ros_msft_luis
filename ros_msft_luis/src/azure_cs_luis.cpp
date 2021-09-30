@@ -117,14 +117,35 @@ void parseAndPublishFromJson(std::string luisJson)
                         std::string type = json_object_dotget_string(entity_object, "type");
                         if (type == "builtin.dimension")
                         {
+                            // Convert builtin.dimension LUIS entity to message dimension
                             JSON_Object *resolution_object = json_object_dotget_object(entity_object, "resolution");
                             if (resolution_object)
                             {
-                                float value = atof(json_object_dotget_string(resolution_object, "value"));
+                                float value = 0.0;
+                                const char* value_string = json_object_dotget_string(resolution_object, "value");
+
+                                if (value_string)
+                                    value = atof(value_string);
+
                                 std::string unit = json_object_dotget_string(resolution_object, "unit");
 
                                 intent.dimension.value = value;
                                 intent.dimension.unit = unit;
+                            }
+                        }
+                        else if (type == "builtin.number")
+                        {
+                            // Copy all builtin.number LUIS entities to message entities
+                            JSON_Object *resolution_object = json_object_dotget_object(entity_object, "resolution");
+                            if (resolution_object)
+                            {
+                                std::string value_string = json_object_dotget_string(resolution_object, "value");
+                                std::string subtype = json_object_dotget_string(resolution_object, "subtype");
+
+                                ros_msft_luis_msgs::Entity new_entity;
+                                new_entity.name = subtype;
+                                new_entity.value = value_string;
+                                intent.entities.push_back(new_entity);
                             }
                         }
                     }
@@ -272,7 +293,6 @@ void intentRecognition()
 
             ROS_INFO("JSON: %s", luisJson.c_str());
             parseAndPublishFromJson(luisJson);
-            ROS_INFO("Say something starting with '%s' followed by whatever you want..." , g_keyWord.c_str());
         }
         else if (e.Result->Reason == ResultReason::RecognizedSpeech)
         {
@@ -312,7 +332,6 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "ros_msft_luis");
     ros::NodeHandle nh;
     ros::NodeHandle nhPrivate("~");
-    std::promise<void> recognitionEnd;
 
     const char *env = std::getenv("azure_cs_luis_key");
     if (env != nullptr)
@@ -464,14 +483,15 @@ int main(int argc, char **argv)
     g_intent_pub = nh.advertise<ros_msft_luis_msgs::TopIntent>("intent", 1);
 
     auto config = SpeechConfig::FromSubscription(g_kwKey, g_kwRegion);
-
-    // Creates a speech recognizer using microphone as audio input. The default language is "en-us".
-    auto recognizer = SpeechRecognizer::FromConfig(config);
-
     auto kwmodel = KeywordRecognitionModel::FromFile(g_keyWordPath);
 
     while (ros::ok())
     {
+        std::promise<void> recognitionEnd;
+
+        // Creates a speech recognizer using microphone as audio input. The default language is "en-us".
+        auto recognizer = SpeechRecognizer::FromConfig(config);
+
         // Subscribes to events.
         recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs &e) {
             if (e.Result->Reason == ResultReason::RecognizingKeyword)
@@ -497,32 +517,32 @@ int main(int argc, char **argv)
 
             if (e.Reason == CancellationReason::Error)
             {
-                ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
-                ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
-                ROS_DEBUG("CANCELED: Did you update the subscription info for the keyword?");
+                ROS_DEBUG("CANCELED KEYWORD: ErrorCode=%d", (int)e.ErrorCode);
+                ROS_DEBUG("CANCELED KEYWORD: ErrorDetails=%s", e.ErrorDetails.c_str());
+                ROS_DEBUG("CANCELED KEYWORD: Did you update the subscription info for the keyword?");
             }
         });
 
         recognizer->SessionStarted.Connect([&recognitionEnd](const SessionEventArgs &e) {
-            ROS_DEBUG("SESSIONSTARTED: SessionId= %s", e.SessionId.c_str());
+            ROS_DEBUG("SESSIONSTARTED KEYWORD: SessionId= %s", e.SessionId.c_str());
         });
 
         recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) {
-            ROS_DEBUG("SESSIONSTOPPED: SessionId= %s", e.SessionId.c_str());
+            ROS_DEBUG("SESSIONSTOPPED KEYWORD: SessionId= %s", e.SessionId.c_str());
 
             recognitionEnd.set_value(); // Notify to stop recognition.
         });
 
-        recognizer->StartKeywordRecognitionAsync(kwmodel);
+        recognizer->StartKeywordRecognitionAsync(kwmodel).wait();
 
         ROS_INFO("Say something starting with '%s' followed by whatever you want..." , g_keyWord.c_str());
 
         // Waits for a single successful keyword-triggered speech recognition (or error).
-        recognitionEnd.get_future().get();
-        ros::spin();
+        recognitionEnd.get_future().wait();
+
+        recognizer->StopKeywordRecognitionAsync().wait();
     }
-    // Stops recognition.
-    recognizer->StopKeywordRecognitionAsync();
+
     nh.shutdown();
     return 0;
 }
