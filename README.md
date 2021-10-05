@@ -49,7 +49,14 @@ The Microsoft Azure Lanugage Understanding Service is an Azure cloud service, wh
 
 To get started, navigate to the [LUIS console](https://www.luis.ai/), to create a lanugage model. To create your own keyword navigate to the [speech studio](https://speech.microsoft.com/) and create your keyword, download the .table file and place it in a known location. 
 
-Once you have completed the model, you can train and publish to a production slot. This will require you to associate the model with a prediction resource on Azure. Once that has been completed, you can configure the ROS node. The ROS node requires the following information from the [LUIS console](https://www.luis.ai/)
+Once you have completed the model, you can train and publish to a production slot. This will require you to associate the model with a prediction resource on Azure. Once that has been completed, you can configure the ROS node. 
+
+-----
+> **IMPORTANT:** a second model is needed to handle the **STOP** robot command. The Keyword created for the Stop Model will be used to immediately stop the robot.
+
+-----
+
+The ROS node requires the following information from the [LUIS console](https://www.luis.ai/)
 
  APP ID -  In Manage Tab --> Settings --> App ID
   
@@ -79,7 +86,9 @@ set azure_cs_luis_region=<Enter your location mentioned above>
 set azure_cs_kw_key=<Enter your key mentioned above from the speech studio>
 set azure_cs_kw_region=<Enter your location mentioned above from the speech studio>
 set azure_cs_kw_path=<Enter the location of the of .table file that you downloaded from above>
+set azure_cs_stop_kw_path=<Enter the location of the of .table file of the Stop Keyword that you downloaded from above>
 set azure_cs_kw=<Enter your custom keyword>
+set azure_cs_stop_kw=<Enter your stop custom keyword>
 ```
 > NOTE: You can use the command `setx` instead of `set` to save this to the system environment. However, you'll have to recycle your command window. 
 
@@ -91,7 +100,9 @@ export azure_cs_luis_region=<Enter your location mentioned above>
 export azure_cs_kw_key=<Enter your key mentioned above from the speech studio>
 export azure_cs_kw_region=<Enter your location mentioned above from the speech studio>
 export azure_cs_kw_path=<Enter the location of the of .table file that you downloaded from above>
+export azure_cs_stop_kw_path=<Enter the location of the of .table file of the Stop Keyword that you downloaded from above>
 export azure_cs_kw=<Enter your custom keyword>
+export azure_cs_stop_kw=<Enter your stop custom keyword>
 ```
 > NOTE: You may wish to place this in your .shellrc file so it is available in each terminal. 
 
