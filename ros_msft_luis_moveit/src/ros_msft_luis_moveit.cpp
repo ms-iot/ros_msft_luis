@@ -8,10 +8,9 @@
 #include <ros_msft_luis_msgs/TopIntent.h>
 
 // TODO: move to parameter
-static const std::string PLANNING_GROUP = "xarm7";
-static const std::string PLANNING_GROUP_GRIPPER = "xarm_gripper";
+static const std::string PLANNING_GROUP_ARM = "xarm7";
+static const std::string PLANNING_GROUP_HAND = "xarm_gripper";
 
-// TODO: Update these based on intent definitions
 const std::string FORWARD = "move arm forward";
 const std::string BACKWARD = "move arm backward";
 const std::string UP = "move arm up";
@@ -54,38 +53,10 @@ float to_meters(float value, std::string unit)
     return 0.0;
 }
 
-// Intent callback -- called when an intent message is received
-void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
+void executeMoveHand(std::string intent)
 {
-    auto intent = str_tolower(msg->topIntent);
-
-    float value_meters;
-    
-    if (msg->dimension.value != 0.0)
-    {
-        value_meters = to_meters(msg->dimension.value, msg->dimension.unit);
-        if (value_meters == 0.0)
-        {
-            ROS_WARN("Could not convert units to meters, no goal will be sent");
-            return;
-        }
-    }
-    else
-    {
-        // Default of 10 centimeters
-        value_meters = 0.1;
-    }
-
     // Target planning group
-    moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
-
-    // Display some information
-
-    ROS_INFO("Available planning groups:");
-    std::for_each(move_group.getJointModelGroupNames().begin(),
-                  move_group.getJointModelGroupNames().end(),
-                  [](const std::string s) { ROS_INFO("- %s", s.c_str()); }
-    );
+    moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP_HAND);
 
     ROS_INFO("Available named targets for current planning group:");
     std::for_each(move_group.getNamedTargets().begin(),
@@ -93,25 +64,13 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
                   [](const std::string s) { ROS_INFO("- %s", s.c_str()); }
     );
 
-    // Create new pose based on current one
-    auto current_pose = move_group.getCurrentPose().pose;
-    geometry_msgs::Pose target_pose = current_pose;
-
-    if (intent == FORWARD)
+    if (intent == OPEN)
     {
-        target_pose.position.x += value_meters;
+        move_group.setNamedTarget("open");
     }
-    else if (intent == BACKWARD)
+    else if (intent == CLOSE)
     {
-        target_pose.position.x -= value_meters;
-    }
-    else if (intent == UP)
-    {
-        target_pose.position.z += value_meters;
-    }
-    else if (intent == DOWN)
-    {
-        target_pose.position.z -= value_meters;
+        move_group.setNamedTarget("close");
     }
     else
     {
@@ -119,6 +78,41 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
         return;
     }
 
+    move_group.move();
+}
+
+void executeMoveArm(std::string intent, float value)
+{
+    // Target planning group
+    moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP_ARM);
+
+    // Create new pose based on current one
+    auto current_pose = move_group.getCurrentPose().pose;
+    geometry_msgs::Pose target_pose = current_pose;
+
+    if (intent == FORWARD)
+    {
+        target_pose.position.x += value;
+    }
+    else if (intent == BACKWARD)
+    {
+        target_pose.position.x -= value;
+    }
+    else if (intent == UP)
+    {
+        target_pose.position.z += value;
+    }
+    else if (intent == DOWN)
+    {
+        target_pose.position.z -= value;
+    }
+    else
+    {
+        ROS_WARN("Unknown intent, no MoveIt target will be set");
+        return;
+    }
+
+    // Set target pose
     move_group.setPoseTarget(target_pose);
 
     // Plan
@@ -129,7 +123,44 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
 
     // Execute
     if (success)
-        move_group.move();
+        move_group.execute(move_plan);
+}
+
+// Intent callback -- called when an intent message is received
+void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
+{
+    auto intent = str_tolower(msg->topIntent);
+
+    if (intent == OPEN || intent == CLOSE)
+    {
+        executeMoveHand(intent);
+    }
+    else if (intent == STOP)
+    {
+        // TODO: stop all movements
+    }
+    else
+    {
+        // Parse the dimension and convert to meters
+        float value_meters;
+        
+        if (msg->dimension.value != 0.0)
+        {
+            value_meters = to_meters(msg->dimension.value, msg->dimension.unit);
+            if (value_meters == 0.0)
+            {
+                ROS_WARN("Could not convert units to meters, no goal will be sent");
+                return;
+            }
+        }
+        else
+        {
+            // Default of 10 centimeters
+            value_meters = 0.1;
+        }
+
+        executeMoveArm(intent, value_meters);
+    }
 }
 
 int main(int argc, char **argv)
