@@ -53,6 +53,17 @@ float to_meters(float value, std::string unit)
     return 0.0;
 }
 
+// Stop all movements
+void executeStop()
+{
+    moveit::planning_interface::MoveGroupInterface move_group_arm(PLANNING_GROUP_ARM);
+    moveit::planning_interface::MoveGroupInterface move_group_hand(PLANNING_GROUP_HAND);
+
+    move_group_arm.stop();
+    move_group_hand.stop();
+}
+
+// Execute hand/gripper movement
 void executeMoveHand(std::string intent)
 {
     // Target planning group
@@ -81,6 +92,7 @@ void executeMoveHand(std::string intent)
     move_group.move();
 }
 
+// Execute arm movement
 void executeMoveArm(std::string intent, float value)
 {
     // Target planning group
@@ -121,9 +133,9 @@ void executeMoveArm(std::string intent, float value)
 
     ROS_INFO("Plan result: %s", success ? "SUCCESSFUL" : "FAILED");
 
-    // Execute
+    // Execute asynchronously
     if (success)
-        move_group.execute(move_plan);
+        move_group.asyncExecute(move_plan);
 }
 
 // Intent callback -- called when an intent message is received
@@ -137,7 +149,7 @@ void intentCallback(const ros_msft_luis_msgs::TopIntent::ConstPtr& msg)
     }
     else if (intent == STOP)
     {
-        // TODO: stop all movements
+        executeStop();
     }
     else
     {
