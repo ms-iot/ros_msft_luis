@@ -15,6 +15,8 @@ const std::string FORWARD = "move arm forward";
 const std::string BACKWARD = "move arm backward";
 const std::string UP = "move arm up";
 const std::string DOWN = "move arm down";
+const std::string LEFT = "move arm left";
+const std::string RIGHT = "move arm right";
 const std::string OPEN = "open hand";
 const std::string CLOSE = "close hand";
 const std::string STOP = "stop";
@@ -117,6 +119,14 @@ void executeMoveArm(std::string intent, float value)
     else if (intent == DOWN)
     {
         target_pose.position.z -= value;
+    }
+    else if (intent == LEFT)
+    {
+        target_pose.position.y += value;
+    }
+    else if (intent == RIGHT)
+    {
+        target_pose.position.y -= value;
     }
     else
     {

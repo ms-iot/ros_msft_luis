@@ -1,6 +1,6 @@
 
 > LUIS application information
-> !# @app.name = ROS_roam
+> !# @app.name = roam
 > !# @app.versionId = 1.0
 > !# @app.culture = en-us
 > !# @app.luis_schema_version = 7.0.0
@@ -9,7 +9,7 @@
 
 > # Intent definitions
 
-## Close Hand
+# Close Hand
 - close gripper
 - close gripper fast
 - close gripper slow
@@ -24,7 +24,7 @@
 - close wrist slowly
 
 
-## Move Arm Backward
+# Move Arm Backward
 - arm back
 - arm backwards
 - arm in
@@ -51,7 +51,7 @@
 - pull back arm slowly
 
 
-## Move Arm Down
+# Move Arm Down
 - arm down
 - arm down 1 inch
 - arm down fast
@@ -70,7 +70,7 @@
 - move arm down slowly
 
 
-## Move Arm Forward
+# Move Arm Forward
 - arm forward
 - arm out
 - arm out fast
@@ -94,7 +94,46 @@
 - move arm staight
 
 
-## Move Arm Up
+# Move Arm Left
+- arm left
+- arm left 3 inches
+- extend arm left
+- extend arm left 1 inch
+- extend arm left 10 centimeters
+- extend arm to the left
+- extend arm to the left 1 foot
+- move arm left
+- move arm left 1 foot
+- move arm left 1 inch
+- move arm left 10 centimeters
+- move arm left 3 inches
+- move arm left fast
+- move arm left slowly
+- move arm to the left
+- move arm to the left 1 inch
+- move arm to the left 10 centimeters
+
+
+# Move Arm Right
+- arm right
+- arm right 1 foot
+- arm right 10 centimeters
+- extend arm right
+- extend arm right 5 centimeters
+- extend arm right fast
+- extend arm right slowly
+- extend arm to the right
+- extend arm to the right 2 inches
+- move arm right
+- move arm right 1 inch
+- move arm right 2 feet
+- move arm to the right
+- move arm to the right 1 foot
+- move arm to the right 3 inches
+- move arm to the right 5 centimeters
+
+
+# Move Arm Up
 - arm up
 - arm up fast
 - arm up slow
@@ -122,7 +161,7 @@
 - shift arm up
 
 
-## Move Backward
+# Move Backward
 - back
 - back away
 - back up
@@ -164,7 +203,7 @@
 - stop back until i say stop
 
 
-## Move forward
+# Move forward
 - advance
 - advance fast
 - advance slow
@@ -201,10 +240,10 @@
 - step up slowly
 
 
-## None
+# None
 
 
-## Open Hand
+# Open Hand
 - open gripper
 - open gripper fast
 - open gripper slow
@@ -223,7 +262,7 @@
 - release hand slowly
 
 
-## Stop
+# Stop
 - break
 - bye
 - cancel move
@@ -245,7 +284,7 @@
 - terminate
 
 
-## Turn Left
+# Turn Left
 - curve left
 - curve left fast
 - curve left slow
@@ -278,7 +317,7 @@
 - turn left {@dimension}
 
 
-## Turn Right
+# Turn Right
 - clockwise
 - curve right
 - curve right fast
@@ -323,8 +362,6 @@
 > # PREBUILT Entity definitions
 
 @ prebuilt dimension
-
-@ prebuilt keyPhrase
 
 @ prebuilt number
 
