@@ -95,7 +95,7 @@ if(MSVC)
 
 else()
   set(ARCH "linux-x64")
-  execute_process(COMMAND unzip "${CMAKE_CURRENT_BINARY_DIR}/speech.nuget" 
+  execute_process(COMMAND unzip -o "${CMAKE_CURRENT_BINARY_DIR}/speech.nuget" 
                WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${SPEECH_RUNTIME}"
                )
 

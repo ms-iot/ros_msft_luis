@@ -43,7 +43,7 @@ int bps;
 
 std::shared_ptr<PushAudioInputStream> g_pushStream;
 
-double g_minScore = 0.8;
+double g_minScore = 0.7;
 
 /* Example response
 {
