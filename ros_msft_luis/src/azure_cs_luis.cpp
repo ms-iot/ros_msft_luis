@@ -32,7 +32,9 @@ std::string g_speechEndpoint;
 std::string g_kwKey;
 std::string g_kwRegion;
 std::string g_keyWordPath;
+std::string g_stopKeyWordPath;
 std::string g_keyWord;
+std::string g_stopKeyWord;
 
 std::string g_microphoneTopic;
 ros::Publisher g_intent_pub;
@@ -327,6 +329,55 @@ void intentRecognition()
     recognitionEnd.get_future().get();
 }
 
+// Keyword-triggered stop.
+void intentStop()
+{
+    ros_msft_luis_msgs::TopIntent intent;
+
+    intent.topIntent = "Stop";
+
+    g_intent_pub.publish(intent);
+}
+
+// Configure a Speech Recognizer and bind it to the given model
+std::promise<void> processRecognition(std::shared_ptr<SpeechRecognizer> recognizer, std::shared_ptr<KeywordRecognitionModel> model)
+{
+	std::promise<void> recognitionEnd;
+
+    // Subscribes to events.
+    recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs &e) {
+        if (e.Result->Reason == ResultReason::RecognizingKeyword)
+        {
+            ROS_INFO("RECOGNIZING KEYWORD: Text= %s", e.Result->Text.c_str());
+        }
+    });
+
+    recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
+        ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
+
+        if (e.Reason == CancellationReason::Error)
+        {
+            ROS_DEBUG("CANCELED: ErrorCode=%d", (int)e.ErrorCode);
+            ROS_DEBUG("CANCELED: ErrorDetails=%s", e.ErrorDetails.c_str());
+            ROS_DEBUG("CANCELED: Did you update the subscription info for the keyword?");
+        }
+    });
+
+    recognizer->SessionStarted.Connect([&recognitionEnd](const SessionEventArgs &e) {
+        ROS_DEBUG("SESSIONSTARTED: SessionId= %s", e.SessionId.c_str());
+    });
+
+    recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) {
+        ROS_DEBUG("SESSIONSTOPPED: SessionId= %s", e.SessionId.c_str());
+
+        recognitionEnd.set_value(); // Notify to stop recognition.
+    });
+
+    recognizer->StartKeywordRecognitionAsync(model);
+	
+    return recognitionEnd;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ros_msft_luis");
@@ -381,10 +432,22 @@ int main(int argc, char **argv)
         g_keyWordPath = env;
     }
 
+    env = std::getenv("azure_cs_stop_kw_path");
+    if (env != nullptr)
+    {
+        g_stopKeyWordPath = env;
+    }
+
     env = std::getenv("azure_cs_kw");
     if (env != nullptr)
     {
         g_keyWord = env;
+    }
+
+    env = std::getenv("azure_cs_stop_kw");
+    if (env != nullptr)
+    {
+        g_stopKeyWord = env;
     }
     // Parameters.
     if (g_luisKey.empty() &&
@@ -435,10 +498,26 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    if (g_stopKeyWord.empty() &&
+        !nhPrivate.getParam("stopKeyword", g_stopKeyWord))
+    {
+        ROS_ERROR("luis Stop KeyWord value has not been set");
+        nh.shutdown();
+        return 0;
+    }
+
     if (g_keyWordPath.empty() &&
         !nhPrivate.getParam("keywordpath", g_keyWordPath))
     {
         ROS_ERROR("luis KeyWordPath has not been set");
+        nh.shutdown();
+        return 0;
+    }
+
+    if (g_stopKeyWordPath.empty() &&
+        !nhPrivate.getParam("keywordpath", g_stopKeyWordPath))
+    {
+        ROS_ERROR("luis Stop KeyWordPath has not been set");
         nh.shutdown();
         return 0;
     }
@@ -483,23 +562,21 @@ int main(int argc, char **argv)
     g_intent_pub = nh.advertise<ros_msft_luis_msgs::TopIntent>("intent", 1);
 
     auto config = SpeechConfig::FromSubscription(g_kwKey, g_kwRegion);
+
+    // Imports the Commands and the Stop models
     auto kwmodel = KeywordRecognitionModel::FromFile(g_keyWordPath);
+    auto stopKwmodel = KeywordRecognitionModel::FromFile(g_stopKeyWordPath);
 
     while (ros::ok())
     {
-        std::promise<void> recognitionEnd;
 
-        // Creates a speech recognizer using microphone as audio input. The default language is "en-us".
+        // Creates two speech recognizers using microphone as audio input. The default language is "en-us".
         auto recognizer = SpeechRecognizer::FromConfig(config);
+        auto stopRecognizer = SpeechRecognizer::FromConfig(config);
 
-        // Subscribes to events.
-        recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs &e) {
-            if (e.Result->Reason == ResultReason::RecognizingKeyword)
-            {
-                ROS_INFO("RECOGNIZING KEYWORD: Text= %s", e.Result->Text.c_str());
-            }
-        });
 
+        // Configuring speech recognizers
+        auto recognitionEndPromise  = processRecognition(recognizer, kwmodel);
         recognizer->Recognized.Connect([](const SpeechRecognitionEventArgs &e) {
             if (e.Result->Reason == ResultReason::RecognizedKeyword)
             {
@@ -512,35 +589,29 @@ int main(int argc, char **argv)
             }
         });
 
-        recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
-            ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
-
-            if (e.Reason == CancellationReason::Error)
+        auto recognitionEndStopPromise  =  processRecognition(stopRecognizer, stopKwmodel);
+        stopRecognizer->Recognized.Connect([](const SpeechRecognitionEventArgs &e) {
+            if (e.Result->Reason == ResultReason::RecognizedKeyword)
             {
-                ROS_DEBUG("CANCELED KEYWORD: ErrorCode=%d", (int)e.ErrorCode);
-                ROS_DEBUG("CANCELED KEYWORD: ErrorDetails=%s", e.ErrorDetails.c_str());
-                ROS_DEBUG("CANCELED KEYWORD: Did you update the subscription info for the keyword?");
+                ROS_INFO("RECOGNIZED KEYWORD: Text= %s", e.Result->Text.c_str());
+                intentStop();
             }
         });
 
-        recognizer->SessionStarted.Connect([&recognitionEnd](const SessionEventArgs &e) {
-            ROS_DEBUG("SESSIONSTARTED KEYWORD: SessionId= %s", e.SessionId.c_str());
-        });
-
-        recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) {
-            ROS_DEBUG("SESSIONSTOPPED KEYWORD: SessionId= %s", e.SessionId.c_str());
-
-            recognitionEnd.set_value(); // Notify to stop recognition.
-        });
-
-        recognizer->StartKeywordRecognitionAsync(kwmodel).wait();
-
         ROS_INFO("Say something starting with '%s' followed by whatever you want..." , g_keyWord.c_str());
+        ROS_INFO("To immediately stop the robot, say something starting with '%s'.." , g_stopKeyWord.c_str());
 
         // Waits for a single successful keyword-triggered speech recognition (or error).
-        recognitionEnd.get_future().wait();
+        auto recognitionEndFuture = recognitionEndPromise.get_future();
+        auto recognitionEndStopFuture = recognitionEndStopPromise.get_future();
 
-        recognizer->StopKeywordRecognitionAsync().wait();
+        // Looping indefinitely between futures to check readiness 
+        while (recognitionEndFuture.wait_for(chrono::seconds(0)) != future_status::ready && recognitionEndStopFuture.wait_for(chrono::seconds(0)) != future_status::ready) 
+        { };
+
+        // Stops recognition.
+        recognizer->StopKeywordRecognitionAsync();
+        stopRecognizer->StopKeywordRecognitionAsync();
     }
 
     nh.shutdown();
