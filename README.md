@@ -43,20 +43,8 @@ catkin_make
 source devel/setup.bash
 ```
 ### Running the LUIS ROS Node
-The Microsoft Azure Lanugage Understanding Service is an Azure cloud service, which provides Lanugage understanding using sophisticated AI. 
 
-> NOTE: LUIS is available as a containerized deployment; instructions coming soon.
-
-To get started, navigate to the [LUIS console](https://www.luis.ai/), to create a lanugage model. To create your own keyword navigate to the [speech studio](https://speech.microsoft.com/) and create your keyword, download the .table file and place it in a known location. 
-
-Once you have completed the model, you can train and publish to a production slot. This will require you to associate the model with a prediction resource on Azure. Once that has been completed, you can configure the ROS node. 
-
------
-> **IMPORTANT:** a second model is needed to handle the **STOP** robot command. The Keyword created for the Stop Model will be used to immediately stop the robot.
-
------
-
-The ROS node requires the following information from the [LUIS console](https://www.luis.ai/)
+To get started with LUIS and the Speech Services, check [this guideline](./docs/walkthrough-luis-config.md).
 
  APP ID -  In Manage Tab --> Settings --> App ID
   
