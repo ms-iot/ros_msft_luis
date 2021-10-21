@@ -131,7 +131,7 @@ At last, we are ready to give voice commands to our robot! The next time you wan
 
 ## Using the LUIS and `move_base` nodes
 
-Now we are ready to launch the LUIS and `ros_msft_luis_move_base_node` nodes. You should first follow the instructions about building and configuring the LUIS nodes.
+Now we are ready to launch the LUIS and `ros_msft_luis_move_base_node` nodes. You should first follow the [instructions in the README](../README.md) about building and configuring the LUIS nodes.
 
 ```
 roslaunch ros_msft_luis luis_move_base.launch

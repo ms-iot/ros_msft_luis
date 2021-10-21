@@ -74,7 +74,7 @@ This will also open an RViz window, where you can interact with the robotic arm 
 
 ## Using the LUIS and MoveIt nodes
 
-Now we are ready to launch the LUIS and `ros_msft_luis_moveit_node` nodes. You should first follow the instructions about building and configuring the LUIS nodes.
+Now we are ready to launch the LUIS and `ros_msft_luis_moveit_node` nodes. You should first follow the [instructions in the README](../README.md) about building and configuring the LUIS nodes.
 
 ```
 roslaunch ros_msft_luis luis_moveit.launch
