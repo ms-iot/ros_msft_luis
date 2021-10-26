@@ -108,7 +108,7 @@ If you would like to use a custom microphone, such as the Respeaker which is ava
 </launch>
 ```
 
-# Using the `move_base` node
+### Using the `move_base` node
 
 The `ros_msft_luis_move_base` node is provided to translate the intents into `move_base` navigation goals. It currently understands the following intents:
 
@@ -120,6 +120,29 @@ To launch the node, you can use the provided launch configuration:
 
 ```
 roslaunch ros_msft_luis luis_move_base.launch
+```
+
+### Using the `moveit` node
+
+The `ros_msft_luis_moveit` node is provided to translate the intents into [MoveIt](https://moveit.ros.org/) movements. It was developed with a simulated [xArm](https://github.com/xArm-Developer/xarm_ros) robotic arm, and thus has some hard-coded values in the code that are specific to this device, in `ros_msft_luis_moveit/src/ros_msft_luis_moveit.cpp`:
+
+```cpp
+static const std::string PLANNING_GROUP_ARM = "xarm7";
+static const std::string PLANNING_GROUP_HAND = "xarm_gripper";
+```
+
+If you are using a different robotic arm, you will need to adjust these values to match the names of the planning groups.
+
+The node currently implements the following intents:
+
+- Arm movements: "Forward", "Backward", "Up", "Down", "Left", "Right". These directions can be followed by a length expressed in centimeters, feet or inches. For example: "raise arm one foot", "move arm backward 3 inches".
+- Hand movements: "Open" and "Close". Note that these two intents are using pre-defined named targets that are probably specific to the [xArm grippper](https://github.com/xArm-Developer/xarm_ros).
+- "Stop", which stops all movements.
+
+To launch the node, you can use the provided launch configuration:
+
+```
+roslaunch ros_msft_luis luis_moveit.launch
 ```
 
 ### Using containers with ROS
