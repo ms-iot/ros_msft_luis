@@ -508,7 +508,7 @@ int main(int argc, char **argv)
     }
 
     if (g_stopKeyWord.empty() &&
-        !nhPrivate.getParam("stopKeyword", g_stopKeyWord))
+        !nhPrivate.getParam("stopkeyword", g_stopKeyWord))
     {
         ROS_ERROR("luis Stop KeyWord value has not been set");
         nh.shutdown();
@@ -524,7 +524,7 @@ int main(int argc, char **argv)
     }
 
     if (g_stopKeyWordPath.empty() &&
-        !nhPrivate.getParam("keywordpath", g_stopKeyWordPath))
+        !nhPrivate.getParam("stopkeywordpath", g_stopKeyWordPath))
     {
         ROS_ERROR("luis Stop KeyWordPath has not been set");
         nh.shutdown();
