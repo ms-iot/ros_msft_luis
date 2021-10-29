@@ -7,6 +7,8 @@
     <param name="kwregion" value="Enter your location mentioned in the speech studio" />
     <param name="keywordpath" value="Enter the location of the of .table file that you downloaded from the speech studio" />
     <param name="keyword" value="Enter your custom keyword" />
+    <param name="stopkeywordpath" value="Enter the location of the of stop .table file that you downloaded from the speech studio" />
+    <param name="stopkeyword" value="Enter your custom stop keyword" />
   </node>
   <node name="luis_test_move_base" pkg="ros_msft_luis_move_base" type="ros_msft_luis_move_base_node" output="screen">
   </node>
