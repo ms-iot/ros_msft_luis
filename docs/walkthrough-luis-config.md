@@ -26,7 +26,7 @@ Then to the **versions** screen:
 
 ![Check versions screen](./img/luis-app-manage-versions.png)
 
-Then, click on the **Import as LU** button and select the [ROS_roam.lu](./ROS_roam.lu) file.
+Then, click on the **Import as LU** button and select the [ROS_roam.lu](./ROS_roam.lu) file. Mark the imported version as activated.
 
 Now, go back to the **Build** section to see the imported **intents**:
 
