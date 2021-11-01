@@ -349,9 +349,9 @@ void intentStop()
 }
 
 // Configure a Speech Recognizer and bind it to the given model
-std::promise<void> processRecognition(std::shared_ptr<SpeechRecognizer> recognizer, std::shared_ptr<KeywordRecognitionModel> model)
+std::shared_ptr<std::promise<void>> processRecognition(std::shared_ptr<SpeechRecognizer> recognizer, std::shared_ptr<KeywordRecognitionModel> model)
 {
-	std::promise<void> recognitionEnd;
+	auto recognitionEnd = std::make_shared<std::promise<void>>();
 
     // Subscribes to events.
     recognizer->Recognizing.Connect([](const SpeechRecognitionEventArgs &e) {
@@ -361,7 +361,7 @@ std::promise<void> processRecognition(std::shared_ptr<SpeechRecognizer> recogniz
         }
     });
 
-    recognizer->Canceled.Connect([&recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
+    recognizer->Canceled.Connect([recognitionEnd](const SpeechRecognitionCanceledEventArgs &e) {
         ROS_DEBUG("CANCELED: Reason=%d", (int)e.Reason);
 
         if (e.Reason == CancellationReason::Error)
@@ -372,14 +372,14 @@ std::promise<void> processRecognition(std::shared_ptr<SpeechRecognizer> recogniz
         }
     });
 
-    recognizer->SessionStarted.Connect([&recognitionEnd](const SessionEventArgs &e) {
+    recognizer->SessionStarted.Connect([recognitionEnd](const SessionEventArgs &e) {
         ROS_DEBUG("SESSIONSTARTED: SessionId= %s", e.SessionId.c_str());
     });
 
-    recognizer->SessionStopped.Connect([&recognitionEnd](const SessionEventArgs &e) {
+    recognizer->SessionStopped.Connect([recognitionEnd](const SessionEventArgs &e) {
         ROS_DEBUG("SESSIONSTOPPED: SessionId= %s", e.SessionId.c_str());
 
-        recognitionEnd.set_value(); // Notify to stop recognition.
+        recognitionEnd->set_value(); // Notify to stop recognition.
     });
 
     recognizer->StartKeywordRecognitionAsync(model);
@@ -612,8 +612,8 @@ int main(int argc, char **argv)
         ROS_INFO("To immediately stop the robot, say something starting with '%s'.." , g_stopKeyWord.c_str());
 
         // Waits for a single successful keyword-triggered speech recognition (or error).
-        auto recognitionEndFuture = recognitionEndPromise.get_future();
-        auto recognitionEndStopFuture = recognitionEndStopPromise.get_future();
+        auto recognitionEndFuture = recognitionEndPromise->get_future();
+        auto recognitionEndStopFuture = recognitionEndStopPromise->get_future();
 
         // Looping indefinitely between futures to check readiness 
         while (recognitionEndFuture.wait_for(chrono::seconds(0)) != future_status::ready && recognitionEndStopFuture.wait_for(chrono::seconds(0)) != future_status::ready) 
